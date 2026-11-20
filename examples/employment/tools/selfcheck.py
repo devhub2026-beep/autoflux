@@ -6,6 +6,7 @@
 """
 from __future__ import annotations
 
+import contextlib
 import csv
 import subprocess
 import sys
@@ -70,6 +71,12 @@ def build_report(rows: list[tuple[str, int, float]]) -> str:
 
 
 def main() -> int:
+    # 和 _check.py 一样：控制台编码可能是 cp1252/GBK，先把中文输出切到 UTF-8
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            with contextlib.suppress(Exception):
+                stream.reconfigure(encoding="utf-8")
+
     rows: list[tuple[str, int, float]] = []
     with (HERE / "data" / "wages_2025.csv").open(encoding="utf-8") as fh:
         for row in csv.DictReader(fh):
@@ -87,9 +94,15 @@ def main() -> int:
         proc = subprocess.run(
             [sys.executable, str(HERE / "_check.py")],
             cwd=tmp,
+            capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             check=False,
         )
+        # 把判分输出原样转出来，不然自检「静默通过」，人看不到它核了哪些项
+        sys.stdout.write(proc.stdout or "")
+        sys.stdout.write(proc.stderr or "")
         return proc.returncode
 
 

@@ -25,6 +25,11 @@
   http/https 端点（`file://` 之类打不开本地文件）。`Tool` 协议改成只读的
   `run: Callable[..., str]`，工具清单才通得过类型检查。
 - 测试 147 → 148（新增「传输层拒绝 file:// 端点」）。
+- **CI 第一次真跑就抓到 Windows 专有问题**：判分脚本 `_check.py` 直接 `print` 中文，
+  而 Windows runner 的控制台编码是 cp1252，`UnicodeEncodeError` 让 3 个 windows job 全挂
+  （ubuntu 三个都过）。给 `_check.py` / `selfcheck.py` 加了 stdout/stderr 切 UTF-8，
+  `selfcheck` 转出判分输出时也按 UTF-8 解码；测试 148 → 149（新增用例在
+  `PYTHONIOENCODING=cp1252` 下跑判分，必须照样通过）。
 
 ## 0.5.0 — 2026-11-20
 

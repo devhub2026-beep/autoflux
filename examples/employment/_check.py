@@ -9,6 +9,7 @@
 """
 from __future__ import annotations
 
+import contextlib
 import re
 import sys
 from pathlib import Path
@@ -52,6 +53,13 @@ def numbers(text: str) -> str:
 
 
 def main() -> int:
+    # Windows 的默认控制台编码可能是 cp1252/GBK，中文直接 print 会 UnicodeEncodeError
+    # （CI 上就是这样挂的），先统一切 UTF-8
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            with contextlib.suppress(Exception):
+                stream.reconfigure(encoding="utf-8")
+
     path = Path("report.md")
     if not path.exists():
         print("FAIL 没有 report.md")
