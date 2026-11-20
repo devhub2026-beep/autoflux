@@ -7,6 +7,7 @@ agent 全程看不到隐藏测试，也没法改评测代码。
 """
 from __future__ import annotations
 
+import contextlib
 import re
 import shutil
 import subprocess
@@ -48,12 +49,13 @@ def run_evaluation(workspace: Path, spec: EvalSpec) -> Score:
                 shutil.copy2(src, sandbox / f"test_{src.name}")
 
         try:
-            proc = subprocess.run(
+            proc = subprocess.run(  # noqa: S603 —— 命令是自己拼的，不走 shell
                 [spec.python, "-m", "unittest", "discover", "-s", ".", "-p", "test*.py"],
                 cwd=sandbox,
                 capture_output=True,
                 text=True,
                 timeout=spec.timeout,
+                check=False,
             )
         except subprocess.TimeoutExpired:
             return Score(0, 1, (f"评测超时（{spec.timeout}s）",))
@@ -75,13 +77,11 @@ def parse_unittest(output: str) -> Score | None:
     failed = 0
     failed_match = _FAILED.search(output)
     if failed_match:
-        for part in failed_match.group(1).split(","):
-            part = part.strip()
+        for raw_part in failed_match.group(1).split(","):
+            part = raw_part.strip()
             if "=" in part:
-                try:
+                with contextlib.suppress(ValueError):
                     failed += int(part.split("=", 1)[1])
-                except ValueError:
-                    pass
     return Score(max(0, total - failed), total, tuple(_BLOCK.findall(output)[:10]))
 
 

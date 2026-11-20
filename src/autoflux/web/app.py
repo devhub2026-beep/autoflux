@@ -26,8 +26,7 @@ from pydantic import BaseModel, Field
 from .. import config as config_mod
 from ..agents.llm import LLMAgent, complete_fn
 from ..checkpoint import SqliteSaver
-from ..employment import Dataset
-from ..employment import qa
+from ..employment import Dataset, qa
 from ..graph import GraphEngine
 from ..reflector import LLMReflector
 from ..skillbook import Skillbook
@@ -105,8 +104,8 @@ def _read_events(path: Path) -> list[dict[str, Any]]:
         return []
     events: list[dict[str, Any]] = []
     try:
-        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
-            line = line.strip()
+        for raw_line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+            line = raw_line.strip()
             if not line:
                 continue
             try:
@@ -274,7 +273,7 @@ class RunManager:
             state.summary = result.summary()
             state.result = result.curve()
             state.status = "done"
-        except Exception as exc:  # noqa: BLE001 - 出错也要让前端看到
+        except Exception as exc:
             state.error = f"{type(exc).__name__}: {exc}"
             state.status = "error"
         finally:
@@ -368,7 +367,7 @@ def create_app(
         try:
             with Skillbook(settings.store) as book:
                 rows = book.all()
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             return {"skills": [], "error": str(exc)}
         return {
             "skills": [
@@ -405,7 +404,8 @@ def create_app(
         result = qa.ask(
             agent, ds, req.question, history=history, attempts=max(1, req.attempts)
         )
-        turns = history + [
+        turns = [
+            *history,
             {"role": "user", "content": req.question},
             {"role": "assistant", "content": result["answer"]},
         ]

@@ -11,9 +11,10 @@ import json
 import os
 import unittest
 import urllib.error
+import urllib.request
 from typing import Any
 
-from autoflux.agents.llm import LLMAgent
+from autoflux.agents.llm import LLMAgent, _urllib_transport
 from autoflux.config import LLMSettings
 
 
@@ -33,7 +34,7 @@ class _Resp:
     def read(self) -> bytes:
         return self._body
 
-    def __enter__(self) -> "_Resp":
+    def __enter__(self) -> _Resp:
         return self
 
     def __exit__(self, *exc: object) -> bool:
@@ -105,6 +106,13 @@ class RetryTest(unittest.TestCase):
             agent.decide(_obs(), [], ())
         self.assertEqual(calls["n"], 1)
         self.assertIn("401", str(ctx.exception))
+
+    def test_transport_rejects_non_http_scheme(self) -> None:
+        # 端点来自配置，别让 file:// 之类的东西借 urlopen 打开本地文件
+        req = urllib.request.Request("file:///etc/passwd")  # noqa: S310 —— 故意构造一个非法端点
+        with self.assertRaises(ValueError) as ctx:
+            _urllib_transport(req, 1.0)
+        self.assertIn("http", str(ctx.exception))
 
 
 def _obs():

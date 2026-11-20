@@ -7,8 +7,6 @@
 """
 from __future__ import annotations
 
-import unittest
-
 from autoflux.config import Limits
 from autoflux.graph import GraphEngine
 from autoflux.reflector import TemplateReflector

@@ -20,9 +20,18 @@ jobs:
       - name: 装依赖
         run: |
           python -m pip install --upgrade pip
-          python -m pip install fastapi uvicorn langgraph
+          python -m pip install fastapi uvicorn langgraph ruff mypy coverage
+      - name: 风格（ruff）
+        run: python -m ruff check .
+      - name: 类型（mypy）
+        run: python -m mypy
       - name: 跑单元测试
         run: python -m unittest discover -s tests -t . -v
+      - name: 覆盖率门槛（85%）
+        if: matrix.python == '3.11' && matrix.os == 'ubuntu-latest'
+        run: |
+          python -m coverage run --source=src/autoflux -m unittest discover -s tests -t .
+          python -m coverage report --fail-under=85
 
   package:
     runs-on: ubuntu-latest
@@ -35,5 +44,16 @@ jobs:
         run: |
           python -m pip install --upgrade build
           python -m build
+      - name: wheel 里该有的东西都在（含 py.typed）
+        run: |
+          python - <<'PY'
+          import glob, zipfile
+          names = zipfile.ZipFile(glob.glob("dist/*.whl")[0]).namelist()
+          need = ["autoflux/py.typed", "autoflux/web/index.html",
+                  "autoflux/tasks/bugfix/hidden/hidden_cases.py"]
+          missing = [n for n in need if n not in names]
+          assert not missing, missing
+          print("wheel 内容 OK：", len(names), "个文件")
+          PY
       - name: 能装上（不拉依赖，CI 里不验证上游）
         run: python -m pip install --no-deps dist/*.whl

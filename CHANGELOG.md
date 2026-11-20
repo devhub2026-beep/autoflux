@@ -16,6 +16,15 @@
   问答多轮与 `/api/ask` 的 history。
 - 去死代码：`config.toml` 里的 `seed` 从来没被读过（远端模型本来也没法靠它复现），
   `Dataset.find` 也没人调，一并删掉。
+- 工程门槛：`ruff check .`（E/F/I/UP/B/SIM/RUF/S/PLW + 忽略中文全角标点的 RUF001-003）
+  与 `mypy`（`src/autoflux` 全量，37 个文件）都零报错；CI 里两条都跑，另加覆盖率
+  ≥85% 的底线（当前 91%）。`py.typed` 随包发布，`.editorconfig`、`CONTRIBUTING.md` 补齐。
+- 照着 mypy 修出来的三处真问题：`SqliteSaver` 的 `put/put_writes/get_tuple/list` 签名
+  对齐 LangGraph 1.x 的 `RunnableConfig`（`put` 现在把带新 `checkpoint_id` 的 config 还回去）；
+  `Skillbook.add` 在 `lastrowid` 为 None 时不再 `int(None)` 崩；模型传输层拒掉非
+  http/https 端点（`file://` 之类打不开本地文件）。`Tool` 协议改成只读的
+  `run: Callable[..., str]`，工具清单才通得过类型检查。
+- 测试 147 → 148（新增「传输层拒绝 file:// 端点」）。
 
 ## 0.5.0 — 2026-11-20
 

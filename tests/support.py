@@ -5,8 +5,8 @@
 """
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 
 from autoflux.protocols import Tool
 from autoflux.types import Action, Observation

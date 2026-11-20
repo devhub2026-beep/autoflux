@@ -11,7 +11,6 @@ import os
 import sys
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
-from pathlib import Path
 from unittest.mock import patch
 
 from autoflux.cli import main

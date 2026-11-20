@@ -16,7 +16,7 @@ SELFCHECK = ROOT / "examples" / "employment" / "tools" / "selfcheck.py"
 
 class ExampleCheckTest(unittest.TestCase):
     def test_reference_report_passes(self) -> None:
-        proc = subprocess.run(
+        proc = subprocess.run(  # noqa: S603 —— 跑的是本仓库的脚本
             [sys.executable, str(SELFCHECK)],
             cwd=str(ROOT),
             capture_output=True,
@@ -24,6 +24,7 @@ class ExampleCheckTest(unittest.TestCase):
             encoding="utf-8",
             errors="replace",
             timeout=60,
+            check=False,
         )
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
         self.assertIn("通过", proc.stdout)

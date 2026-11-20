@@ -13,9 +13,11 @@ import os
 import re
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
+from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Any, Callable, Sequence
+from typing import Any
 
 from ..config import LLMSettings
 from ..protocols import Tool
@@ -27,7 +29,11 @@ Transport = Callable[[Any, float], Any]
 
 
 def _urllib_transport(req: Any, timeout: float) -> Any:
-    return urllib.request.urlopen(req, timeout=timeout)
+    # 端点来自配置/环境变量，顺手把 scheme 卡死在 http(s)，免得 file:// 或自定义协议也能被打开
+    scheme = urllib.parse.urlsplit(getattr(req, "full_url", "")).scheme
+    if scheme not in ("http", "https"):
+        raise ValueError(f"模型端点只允许 http/https，收到的是 {scheme or '空'}")
+    return urllib.request.urlopen(req, timeout=timeout)  # noqa: S310 —— scheme 上面已校验
 
 
 def _load_env_file() -> None:
@@ -45,8 +51,8 @@ def _load_env_file() -> None:
             lines = path.read_text(encoding="utf-8-sig").splitlines()
         except OSError:
             continue
-        for line in lines:
-            line = line.strip()
+        for raw in lines:
+            line = raw.strip()
             if not line or line.startswith("#") or "=" not in line:
                 continue
             key, _, value = line.partition("=")
@@ -183,7 +189,7 @@ class LLMAgent:
             "temperature": self.settings.temperature,
         }).encode("utf-8")
 
-        req = urllib.request.Request(
+        req = urllib.request.Request(  # noqa: S310 —— scheme 已在 transport 里校验
             url,
             data=payload,
             headers={

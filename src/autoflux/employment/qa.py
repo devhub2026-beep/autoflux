@@ -5,7 +5,8 @@
 """
 from __future__ import annotations
 
-from typing import Any, Protocol, Sequence
+from collections.abc import Sequence
+from typing import Any, Protocol
 
 from .dataset import Dataset
 from .verify import verify

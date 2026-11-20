@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import unittest
 from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch

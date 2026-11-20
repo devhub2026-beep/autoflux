@@ -305,7 +305,7 @@ src/autoflux/
 python -m unittest discover -s tests -t .
 ```
 
-**147 个用例，全绿**，覆盖：停止条件、时间预算、策略库去重与持久化、反思必须带信号、
+**148 个用例，全绿**，覆盖：停止条件、时间预算、策略库去重与持久化、反思必须带信号、
 诊断能穿透盲评测、评测器不打脏工作区、隐藏用例不泄漏、重复输出折叠、
 上下文按预算裁剪、LangGraph 图只有一个环、网页接口的 400/404、
 计划的写入与回读、卡住提醒的三条阈值、从 `state.json` 续跑后尝试序号不丢、
@@ -328,6 +328,17 @@ python -m unittest discover -s tests -t .
 行覆盖 **90%**（`python -m coverage run --source=src/autoflux -m unittest discover -s tests -t .`）：
 `cli.py` 85%、`bench.py` 87%、`web/app.py` 84%、`graph.py` 93%。没覆盖的主要是
 交互式 `--chat` 的终端分支、`serve` 的进程生命周期、以及几个只在真网络下才走到的重试分支。
+
+提交前的三条门槛（CI 里也是这三条，外加覆盖率 85% 的底线）：
+
+```bash
+ruff check .          # 风格的筛子，含 pyupgrade / bugbear / bandit 的一部分
+mypy                  # src/autoflux 全量类型检查，py.typed 已随包发布
+python -m unittest discover -s tests -t .
+```
+
+约定写在 [CONTRIBUTING.md](CONTRIBUTING.md)：注释写「为什么」、分数只能来自 evaluator、
+提示词里不能有隐藏用例。
 
 `tests/test_llm_flow.py` 用假传输层把真 `LLMAgent` 的整条路径离线跑通，毫秒级不花钱。
 

@@ -11,8 +11,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from ..types import Score
 from ..evaluator import parse_unittest
+from ..types import Score
 
 _IGNORE = shutil.ignore_patterns(
     ".git", ".venv", "__pycache__", "*.pyc", ".idea", "runs", ".autoflux",
@@ -78,7 +78,7 @@ class GoalTask:
     # -- 内部 ---------------------------------------------------------
     def _run(self, workspace: Path) -> tuple[int, str]:
         try:
-            proc = subprocess.run(
+            proc = subprocess.run(  # noqa: S602 —— 判定命令本来就是用户给的一行 shell
                 self.check,
                 shell=True,
                 cwd=str(workspace),
@@ -87,6 +87,7 @@ class GoalTask:
                 encoding="utf-8",
                 errors="replace",
                 timeout=self.timeout,
+                check=False,
             )
         except subprocess.TimeoutExpired:
             return 124, f"检查命令超时（超过 {self.timeout:g} 秒）"

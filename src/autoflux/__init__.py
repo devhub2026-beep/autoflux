@@ -22,6 +22,6 @@ __all__ = [
     "Score",
     "Settings",
     "Skillbook",
-    "load",
     "__version__",
+    "load",
 ]

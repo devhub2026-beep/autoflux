@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import sys
 import time
@@ -18,15 +19,16 @@ from pathlib import Path
 from . import config, tasks
 from .agents.llm import LLMAgent, complete_fn
 from .checkpoint import SqliteSaver
-from .employment import Dataset
-from .employment import qa
+from .employment import Dataset, qa
 from .graph import GraphEngine
+from .protocols import Task
 from .reflector import LLMReflector
 from .skillbook import Skillbook
 from .stop import StopPolicy
 from .tasks.goal import GoalTask
 from .tools.fs import default_tools
 from .trace import Tracer
+from .types import RunResult
 
 RESUME_KEYS = (
     "history",
@@ -125,7 +127,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
         if not args.check:
             print("[错误] --goal 必须配 --check（判定命令），否则没人能给分", file=sys.stderr)
             return 2
-        task = GoalTask(goal=args.goal, check=args.check, source=Path(args.project))
+        task: Task = GoalTask(goal=args.goal, check=args.check, source=Path(args.project))
     else:
         try:
             task = tasks.get(cfg.task)
@@ -243,7 +245,7 @@ def _cmd_resume(args: argparse.Namespace, cfg: config.Settings) -> int:
     return 0
 
 
-def _print_result(result, trace_path: Path, workdir: Path) -> None:
+def _print_result(result: RunResult, trace_path: Path | None, workdir: Path) -> None:
     print(f"\n=== {result.task} ===")
     print(result.summary())
     if result.attempts:
@@ -255,7 +257,7 @@ def _print_result(result, trace_path: Path, workdir: Path) -> None:
             )
             for line in a.score.details[:4]:
                 print(f"       {line}")
-    print(f"\n追踪文件    {trace_path}")
+    print(f"\n追踪文件    {trace_path or '（未开）'}")
     print(f"工作区      {workdir}")
 
 
@@ -350,10 +352,8 @@ def main(argv: list[str] | None = None) -> int:
     # Windows 控制台默认 GBK，中文会乱码；统一成 UTF-8
     for stream in (sys.stdout, sys.stderr):
         if hasattr(stream, "reconfigure"):
-            try:
+            with contextlib.suppress(Exception):
                 stream.reconfigure(encoding="utf-8")
-            except Exception:  # noqa: BLE001
-                pass
 
     raw = list(argv) if argv is not None else sys.argv[1:]
     # bench 有自己的参数，先交给它，免得被主解析器拒掉

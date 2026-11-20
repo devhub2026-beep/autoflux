@@ -4,8 +4,8 @@ from __future__ import annotations
 import shutil
 import tempfile
 import unittest
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 
 from autoflux.checkpoint import SqliteSaver
 from autoflux.config import Limits

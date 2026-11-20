@@ -27,8 +27,7 @@ def build_report(rows: list[tuple[str, int, float]]) -> str:
         "# 2025 年城镇单位分行业薪资报告",
         "",
         "一句话结论：19 个行业门类的年平均工资从 6.2 万到 24.9 万，",
-        "信息传输、软件和信息技术服务业最高，住宿和餐饮业最低，相差约 "
-        f"{ratio:.2f} 倍。",
+        f"信息传输、软件和信息技术服务业最高，住宿和餐饮业最低，相差约 {ratio:.2f} 倍。",
         "",
         "## 口径",
         "",
@@ -86,7 +85,10 @@ def main() -> int:
     with tempfile.TemporaryDirectory() as tmp:
         (Path(tmp) / "report.md").write_text(build_report(rows), encoding="utf-8")
         proc = subprocess.run(
-            [sys.executable, str(HERE / "_check.py")], cwd=tmp, text=True
+            [sys.executable, str(HERE / "_check.py")],
+            cwd=tmp,
+            text=True,
+            check=False,
         )
         return proc.returncode
 

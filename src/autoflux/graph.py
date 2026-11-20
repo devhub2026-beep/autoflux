@@ -21,8 +21,9 @@ from __future__ import annotations
 import json
 import time
 import traceback
+from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Any, Callable, Sequence, TypedDict
+from typing import Any, TypedDict
 
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
@@ -357,7 +358,7 @@ class GraphEngine:
             return False
         try:
             return saver.get_tuple(config) is not None
-        except Exception:  # noqa: BLE001 - 读不出来就当没有，退回新跑
+        except Exception:
             return False
 
     def resume(self, should_stop: Callable[[], bool] | None = None) -> RunResult:
@@ -465,7 +466,7 @@ class GraphEngine:
             return ""
         try:
             return str(diagnose(self.workdir) or "")
-        except Exception:  # noqa: BLE001
+        except Exception:
             return ""
 
     @staticmethod
@@ -540,7 +541,7 @@ class GraphEngine:
                     return tool.run(**action.args)[:MAX_TOOL_OUTPUT]
                 except TypeError as exc:
                     return f"ERROR 参数不对：{exc}"
-                except Exception:  # noqa: BLE001
+                except Exception:
                     return "ERROR " + traceback.format_exc(limit=3)
         return f"ERROR 没有名为 {action.name!r} 的工具"
 

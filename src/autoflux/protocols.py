@@ -4,8 +4,9 @@
 """
 from __future__ import annotations
 
+from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Protocol, Sequence, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 from .types import Action, Observation, Score
 
@@ -15,9 +16,11 @@ class Tool(Protocol):
     name: str
     description: str
 
-    def run(self, **kwargs: object) -> str:
-        """执行并返回给 agent 看的文本结果。异常由引擎捕获并转成文本。"""
-        ...
+    # 具体工具各收各的参数（read_file 要 path，run_python 要 code），
+    # 所以这里只能声明「可调用、返回文本」，不能写死签名。
+    # 声明成只读属性（而不是 `run: Callable`），类里用普通方法实现才对得上。
+    @property
+    def run(self) -> Callable[..., str]: ...
 
 
 @runtime_checkable

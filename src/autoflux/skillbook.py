@@ -54,7 +54,8 @@ class Skillbook:
                 (body, key, source, time.time()),
             )
             self._con.commit()
-            return int(cur.lastrowid)
+            rowid = cur.lastrowid
+            return int(rowid) if rowid is not None else None
         except sqlite3.IntegrityError:
             return None
 
@@ -108,7 +109,7 @@ class Skillbook:
     def close(self) -> None:
         self._con.close()
 
-    def __enter__(self) -> "Skillbook":
+    def __enter__(self) -> Skillbook:
         return self
 
     def __exit__(self, *exc: object) -> None:

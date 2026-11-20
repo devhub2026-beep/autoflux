@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 import os
-import unittest
 from pathlib import Path
 from typing import Any
 
@@ -30,7 +29,7 @@ class _Resp:
     def read(self) -> bytes:
         return self._body
 
-    def __enter__(self) -> "_Resp":
+    def __enter__(self) -> _Resp:
         return self
 
     def __exit__(self, *exc: object) -> bool:

@@ -86,19 +86,19 @@ class AskCliTest(ScratchCase):
     def test_ask_command_reports_unverified(self) -> None:
         fake = FakeLLM(["全国合计 150000 元。", "全国合计 150000 元。"])
         err = io.StringIO()
-        with patch("autoflux.cli.LLMAgent", lambda *a, **k: fake):
-            with redirect_stdout(io.StringIO()), redirect_stderr(err):
-                code = main(
-                    [
-                        "ask",
-                        "--question",
-                        "全国平均多少？",
-                        "--data",
-                        str(DATA),
-                        "--attempts",
-                        "2",
-                    ]
-                )
+        with patch("autoflux.cli.LLMAgent", lambda *a, **k: fake), \
+                redirect_stdout(io.StringIO()), redirect_stderr(err):
+            code = main(
+                [
+                    "ask",
+                    "--question",
+                    "全国平均多少？",
+                    "--data",
+                    str(DATA),
+                    "--attempts",
+                    "2",
+                ]
+            )
         self.assertEqual(code, 1)
         self.assertIn("150000", err.getvalue())
 
@@ -122,9 +122,9 @@ class AskChatTest(ScratchCase):
         )
         buf = io.StringIO()
         with patch("autoflux.cli.LLMAgent", lambda *a, **k: fake), \
-                patch("builtins.input", side_effect=["全国平均多少？", "哪个行业最高？", ""]):
-            with redirect_stdout(buf):
-                code = main(["ask", "--chat", "--data", str(DATA)])
+                patch("builtins.input", side_effect=["全国平均多少？", "哪个行业最高？", ""]), \
+                redirect_stdout(buf):
+            code = main(["ask", "--chat", "--data", str(DATA)])
         self.assertEqual(code, 0)
         self.assertEqual(len(fake.calls), 2)
         joined = "\n".join(m["content"] for m in fake.calls[1])

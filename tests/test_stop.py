@@ -7,7 +7,7 @@ from autoflux.stop import StopPolicy
 
 
 def policy(**kw) -> StopPolicy:
-    base = dict(max_steps=20, max_attempts=10, target_score=1.0, no_improve_limit=2)
+    base = {"max_steps": 20, "max_attempts": 10, "target_score": 1.0, "no_improve_limit": 2}
     base.update(kw)
     return StopPolicy(Limits(**base))
 

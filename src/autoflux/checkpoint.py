@@ -9,9 +9,11 @@ from __future__ import annotations
 
 import sqlite3
 import threading
+from collections.abc import Iterator, Sequence
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
+from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.base import (
     BaseCheckpointSaver,
     ChannelVersions,
@@ -19,6 +21,9 @@ from langgraph.checkpoint.base import (
     CheckpointMetadata,
     CheckpointTuple,
 )
+
+# class 里有个 list 方法，类作用域内 `list[...]` 会被当成方法名，所以挪到模块级
+Writes = list[tuple[str, str, Any]]
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS checkpoints (
@@ -59,11 +64,11 @@ class SqliteSaver(BaseCheckpointSaver):
     # -- 写 -----------------------------------------------------------
     def put(
         self,
-        config: dict[str, Any],
+        config: RunnableConfig,
         checkpoint: Checkpoint,
         metadata: CheckpointMetadata,
         new_versions: ChannelVersions,
-    ) -> dict[str, Any]:
+    ) -> RunnableConfig:
         thread_id = config["configurable"]["thread_id"]
         parent_id = config["configurable"].get("checkpoint_id")
         ctype, cblob = self.serde.dumps_typed(checkpoint)
@@ -82,6 +87,7 @@ class SqliteSaver(BaseCheckpointSaver):
                 ),
             )
             self._conn.commit()
+        # LangGraph 1.x 要求 put 把「带新 checkpoint_id 的 config」还回去
         return {
             "configurable": {
                 "thread_id": thread_id,
@@ -91,8 +97,8 @@ class SqliteSaver(BaseCheckpointSaver):
 
     def put_writes(
         self,
-        config: dict[str, Any],
-        writes: list[tuple[str, Any]],
+        config: RunnableConfig,
+        writes: Sequence[tuple[str, Any]],
         task_id: str,
         task_path: str = "",
     ) -> None:
@@ -114,7 +120,7 @@ class SqliteSaver(BaseCheckpointSaver):
             self._conn.commit()
 
     # -- 读 -----------------------------------------------------------
-    def get_tuple(self, config: dict[str, Any]) -> CheckpointTuple | None:
+    def get_tuple(self, config: RunnableConfig) -> CheckpointTuple | None:
         thread_id = config["configurable"]["thread_id"]
         checkpoint_id = config["configurable"].get("checkpoint_id")
         if checkpoint_id:
@@ -148,10 +154,10 @@ class SqliteSaver(BaseCheckpointSaver):
 
     def list(
         self,
-        config: dict[str, Any] | None,
+        config: RunnableConfig | None,
         *,
         filter: dict[str, Any] | None = None,
-        before: dict[str, Any] | None = None,
+        before: RunnableConfig | None = None,
         limit: int | None = None,
     ) -> Iterator[CheckpointTuple]:
         thread_id = (config or {}).get("configurable", {}).get("thread_id")
@@ -176,7 +182,7 @@ class SqliteSaver(BaseCheckpointSaver):
         self._conn.commit()
 
     # -- 内部 ---------------------------------------------------------
-    def _writes(self, thread_id: str, checkpoint_id: str) -> list[tuple[str, str, Any]]:
+    def _writes(self, thread_id: str, checkpoint_id: str) -> Writes:
         rows = self._conn.execute(
             "SELECT task_id, channel, value FROM writes"
             " WHERE thread_id = ? AND checkpoint_id = ? ORDER BY task_id, idx",
@@ -188,10 +194,10 @@ class SqliteSaver(BaseCheckpointSaver):
     def close(self) -> None:
         self._conn.close()
 
-    def __enter__(self) -> "SqliteSaver":
+    def __enter__(self) -> SqliteSaver:
         return self
 
-    def __exit__(self, *exc: Any) -> None:
+    def __exit__(self, *exc: object) -> None:
         self.close()
 
 

@@ -9,6 +9,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from ..protocols import Tool
+
 
 class WorkspaceTool:
     def __init__(self, root: Path) -> None:
@@ -67,6 +69,7 @@ class RunTests(WorkspaceTool):
             capture_output=True,
             text=True,
             timeout=120,
+            check=False,
         )
         out = (proc.stdout + proc.stderr).strip()
         return out[-3000:] if out else "（无输出）"
@@ -77,12 +80,13 @@ class RunPython(WorkspaceTool):
     description = "在工作区执行一段 Python 代码。参数：code。"
 
     def run(self, code: str) -> str:
-        proc = subprocess.run(
+        proc = subprocess.run(  # noqa: S603 —— 这个工具的本职就是跑 agent 给的代码
             [sys.executable, "-c", code],
             cwd=self.root,
             capture_output=True,
             text=True,
             timeout=60,
+            check=False,
         )
         out = ((proc.stdout or "") + (proc.stderr or "")).strip()
         if proc.returncode != 0:
@@ -90,5 +94,5 @@ class RunPython(WorkspaceTool):
         return out[-3000:] if out else "（无输出）"
 
 
-def default_tools(root: Path) -> list[WorkspaceTool]:
+def default_tools(root: Path) -> list[Tool]:
     return [ListFiles(root), ReadFile(root), WriteFile(root), RunTests(root), RunPython(root)]

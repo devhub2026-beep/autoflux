@@ -116,6 +116,6 @@ class Dataset:
             }
         )
         # 往年的增量：2025 - 2024
-        for row in list(self.rows) + [self.total]:
+        for row in [*self.rows, self.total]:
             values.add(float(row.wage - row.prev))
         return values

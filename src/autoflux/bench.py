@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import statistics
 import sys
@@ -98,7 +99,7 @@ def run_once(
             )
             result = engine.run()
         seconds = time.time() - started
-    except Exception as exc:  # noqa: BLE001 - 一次跑挂掉不该毁掉整批结果
+    except Exception as exc:
         return {
             "task": spec["name"],
             "success": False,
@@ -180,10 +181,8 @@ def _print_table(summary: dict[str, Any]) -> None:
 def main(argv: list[str] | None = None) -> int:
     for stream in (sys.stdout, sys.stderr):
         if hasattr(stream, "reconfigure"):
-            try:
+            with contextlib.suppress(Exception):
                 stream.reconfigure(encoding="utf-8")
-            except Exception:  # noqa: BLE001
-                pass
 
     p = argparse.ArgumentParser(prog="autoflux bench", description="同一批任务跑 N 次，出数字")
     p.add_argument("--tasks", default="all", help="逗号分隔的任务名，或 all")
