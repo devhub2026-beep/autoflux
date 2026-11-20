@@ -1,5 +1,7 @@
 # autoflux
 
+[![tests](https://github.com/devhub2026-beep/autoflux/actions/workflows/tests.yml/badge.svg)](https://github.com/devhub2026-beep/autoflux/actions/workflows/tests.yml)
+
 给它一句话目标，它自己拆、自己试、自己知道错在哪、自己改，跑到过了为止。
 中间不用你管，也没有「第几步该干什么」的剧本。
 
