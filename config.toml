@@ -1,0 +1,18 @@
+[run]
+task = "bugfix"
+seed = 0
+max_steps = 40
+max_attempts = 5
+max_seconds = 1800
+target_score = 1.0
+no_improve_limit = 3
+
+[llm]
+base_url = "https://api.deepseek.com/v1"
+model = "deepseek-v4-pro"
+api_key_env = "AUTOFLUX_API_KEY"
+temperature = 0.2
+timeout = 120.0
+
+[store]
+path = ".autoflux/state.db"

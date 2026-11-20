@@ -1,0 +1,43 @@
+{
+  "stamp": "20261114-221357",
+  "rows": [
+    {
+      "task": "txtlib",
+      "success": true,
+      "best": 1.0,
+      "steps": 9,
+      "seconds": 99.3,
+      "reflections": 0,
+      "attempts": 1,
+      "stop_reason": "达标（1.00 >= 1.00）",
+      "curve": [
+        1.0
+      ],
+      "plan_done": 2,
+      "plan_total": 4
+    }
+  ],
+  "summary": {
+    "overall": {
+      "n": 1,
+      "success": 1,
+      "success_rate": 1.0,
+      "steps_mean": 9,
+      "steps_max": 9,
+      "seconds_mean": 99.3,
+      "reflections_mean": 0
+    },
+    "by_task": {
+      "txtlib": {
+        "n": 1,
+        "success": 1,
+        "success_rate": 1.0,
+        "steps_mean": 9,
+        "steps_max": 9,
+        "seconds_mean": 99.3,
+        "reflections_mean": 0
+      }
+    },
+    "failure_reasons": {}
+  }
+}

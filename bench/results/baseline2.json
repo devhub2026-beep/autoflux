@@ -1,0 +1,343 @@
+{
+  "stamp": "20261114-223359",
+  "rows": [
+    {
+      "task": "calc",
+      "success": true,
+      "best": 1.0,
+      "steps": 9,
+      "seconds": 43.3,
+      "reflections": 0,
+      "attempts": 1,
+      "stop_reason": "达标（1.00 >= 1.00）",
+      "curve": [
+        1.0
+      ],
+      "plan_done": 4,
+      "plan_total": 4
+    },
+    {
+      "task": "calc",
+      "success": true,
+      "best": 1.0,
+      "steps": 10,
+      "seconds": 96.9,
+      "reflections": 0,
+      "attempts": 1,
+      "stop_reason": "达标（1.00 >= 1.00）",
+      "curve": [
+        1.0
+      ],
+      "plan_done": 2,
+      "plan_total": 4
+    },
+    {
+      "task": "calc",
+      "success": true,
+      "best": 1.0,
+      "steps": 10,
+      "seconds": 87.1,
+      "reflections": 0,
+      "attempts": 1,
+      "stop_reason": "达标（1.00 >= 1.00）",
+      "curve": [
+        1.0
+      ],
+      "plan_done": 1,
+      "plan_total": 3
+    },
+    {
+      "task": "csvkit",
+      "success": true,
+      "best": 1.0,
+      "steps": 9,
+      "seconds": 81.9,
+      "reflections": 0,
+      "attempts": 1,
+      "stop_reason": "达标（1.00 >= 1.00）",
+      "curve": [
+        1.0
+      ],
+      "plan_done": 3,
+      "plan_total": 4
+    },
+    {
+      "task": "csvkit",
+      "success": true,
+      "best": 1.0,
+      "steps": 9,
+      "seconds": 69.7,
+      "reflections": 0,
+      "attempts": 1,
+      "stop_reason": "达标（1.00 >= 1.00）",
+      "curve": [
+        1.0
+      ],
+      "plan_done": 4,
+      "plan_total": 4
+    },
+    {
+      "task": "csvkit",
+      "success": true,
+      "best": 1.0,
+      "steps": 6,
+      "seconds": 68.7,
+      "reflections": 0,
+      "attempts": 1,
+      "stop_reason": "达标（1.00 >= 1.00）",
+      "curve": [
+        1.0
+      ],
+      "plan_done": 0,
+      "plan_total": 0
+    },
+    {
+      "task": "days",
+      "success": true,
+      "best": 1.0,
+      "steps": 9,
+      "seconds": 34.4,
+      "reflections": 0,
+      "attempts": 1,
+      "stop_reason": "达标（1.00 >= 1.00）",
+      "curve": [
+        1.0
+      ],
+      "plan_done": 4,
+      "plan_total": 4
+    },
+    {
+      "task": "days",
+      "success": true,
+      "best": 1.0,
+      "steps": 9,
+      "seconds": 41.1,
+      "reflections": 0,
+      "attempts": 1,
+      "stop_reason": "达标（1.00 >= 1.00）",
+      "curve": [
+        1.0
+      ],
+      "plan_done": 2,
+      "plan_total": 3
+    },
+    {
+      "task": "days",
+      "success": true,
+      "best": 1.0,
+      "steps": 8,
+      "seconds": 43.1,
+      "reflections": 0,
+      "attempts": 1,
+      "stop_reason": "达标（1.00 >= 1.00）",
+      "curve": [
+        1.0
+      ],
+      "plan_done": 3,
+      "plan_total": 3
+    },
+    {
+      "task": "inventory",
+      "success": true,
+      "best": 1.0,
+      "steps": 9,
+      "seconds": 67.5,
+      "reflections": 0,
+      "attempts": 1,
+      "stop_reason": "达标（1.00 >= 1.00）",
+      "curve": [
+        1.0
+      ],
+      "plan_done": 4,
+      "plan_total": 4
+    },
+    {
+      "task": "inventory",
+      "success": true,
+      "best": 1.0,
+      "steps": 6,
+      "seconds": 45.0,
+      "reflections": 0,
+      "attempts": 1,
+      "stop_reason": "达标（1.00 >= 1.00）",
+      "curve": [
+        1.0
+      ],
+      "plan_done": 0,
+      "plan_total": 4
+    },
+    {
+      "task": "inventory",
+      "success": true,
+      "best": 1.0,
+      "steps": 6,
+      "seconds": 33.0,
+      "reflections": 0,
+      "attempts": 1,
+      "stop_reason": "达标（1.00 >= 1.00）",
+      "curve": [
+        1.0
+      ],
+      "plan_done": 0,
+      "plan_total": 0
+    },
+    {
+      "task": "retry",
+      "success": true,
+      "best": 1.0,
+      "steps": 5,
+      "seconds": 36.6,
+      "reflections": 0,
+      "attempts": 1,
+      "stop_reason": "达标（1.00 >= 1.00）",
+      "curve": [
+        1.0
+      ],
+      "plan_done": 0,
+      "plan_total": 0
+    },
+    {
+      "task": "retry",
+      "success": true,
+      "best": 1.0,
+      "steps": 9,
+      "seconds": 47.5,
+      "reflections": 0,
+      "attempts": 1,
+      "stop_reason": "达标（1.00 >= 1.00）",
+      "curve": [
+        1.0
+      ],
+      "plan_done": 3,
+      "plan_total": 5
+    },
+    {
+      "task": "retry",
+      "success": true,
+      "best": 1.0,
+      "steps": 11,
+      "seconds": 53.1,
+      "reflections": 0,
+      "attempts": 1,
+      "stop_reason": "达标（1.00 >= 1.00）",
+      "curve": [
+        1.0
+      ],
+      "plan_done": 3,
+      "plan_total": 3
+    },
+    {
+      "task": "txtlib",
+      "success": true,
+      "best": 1.0,
+      "steps": 9,
+      "seconds": 106.8,
+      "reflections": 0,
+      "attempts": 1,
+      "stop_reason": "达标（1.00 >= 1.00）",
+      "curve": [
+        1.0
+      ],
+      "plan_done": 3,
+      "plan_total": 3
+    },
+    {
+      "task": "txtlib",
+      "success": true,
+      "best": 1.0,
+      "steps": 9,
+      "seconds": 92.2,
+      "reflections": 0,
+      "attempts": 1,
+      "stop_reason": "达标（1.00 >= 1.00）",
+      "curve": [
+        1.0
+      ],
+      "plan_done": 3,
+      "plan_total": 4
+    },
+    {
+      "task": "txtlib",
+      "success": true,
+      "best": 1.0,
+      "steps": 6,
+      "seconds": 93.6,
+      "reflections": 0,
+      "attempts": 1,
+      "stop_reason": "达标（1.00 >= 1.00）",
+      "curve": [
+        1.0
+      ],
+      "plan_done": 0,
+      "plan_total": 0
+    }
+  ],
+  "summary": {
+    "overall": {
+      "n": 18,
+      "success": 18,
+      "success_rate": 1.0,
+      "steps_mean": 8.3,
+      "steps_max": 11,
+      "seconds_mean": 63.4,
+      "reflections_mean": 0
+    },
+    "by_task": {
+      "calc": {
+        "n": 3,
+        "success": 3,
+        "success_rate": 1.0,
+        "steps_mean": 9.7,
+        "steps_max": 10,
+        "seconds_mean": 75.8,
+        "reflections_mean": 0
+      },
+      "csvkit": {
+        "n": 3,
+        "success": 3,
+        "success_rate": 1.0,
+        "steps_mean": 8,
+        "steps_max": 9,
+        "seconds_mean": 73.4,
+        "reflections_mean": 0
+      },
+      "days": {
+        "n": 3,
+        "success": 3,
+        "success_rate": 1.0,
+        "steps_mean": 8.7,
+        "steps_max": 9,
+        "seconds_mean": 39.5,
+        "reflections_mean": 0
+      },
+      "inventory": {
+        "n": 3,
+        "success": 3,
+        "success_rate": 1.0,
+        "steps_mean": 7,
+        "steps_max": 9,
+        "seconds_mean": 48.5,
+        "reflections_mean": 0
+      },
+      "retry": {
+        "n": 3,
+        "success": 3,
+        "success_rate": 1.0,
+        "steps_mean": 8.3,
+        "steps_max": 11,
+        "seconds_mean": 45.7,
+        "reflections_mean": 0
+      },
+      "txtlib": {
+        "n": 3,
+        "success": 3,
+        "success_rate": 1.0,
+        "steps_mean": 8,
+        "steps_max": 9,
+        "seconds_mean": 97.5,
+        "reflections_mean": 0
+      }
+    },
+    "failure_reasons": {}
+  }
+}

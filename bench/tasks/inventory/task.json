@@ -1,0 +1,4 @@
+{
+  "goal": "这个目录里的库存小工具有几处写错了，跑测试能看到失败。修好实现，别改测试。",
+  "check": "{python} -m unittest discover -q"
+}

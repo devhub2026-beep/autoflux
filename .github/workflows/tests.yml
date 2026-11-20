@@ -1,0 +1,39 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  unit:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: 装依赖
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install fastapi uvicorn langgraph
+      - name: 跑单元测试
+        run: python -m unittest discover -s tests -t . -v
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: 能打成包
+        run: |
+          python -m pip install --upgrade build
+          python -m build
+      - name: 能装上（不拉依赖，CI 里不验证上游）
+        run: python -m pip install --no-deps dist/*.whl

@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>autoflux — 看它自己跑</title>
+<style>
+  :root {
+    --bg: #0e1116; --panel: #161b22; --line: #232b36;
+    --text: #d7dee8; --dim: #7d8896; --accent: #4c8dff;
+    --ok: #3fb950; --warn: #d29922; --bad: #f85149;
+    --mono: ui-monospace, "Cascadia Code", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.6 -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+    height: 100vh; display: flex; flex-direction: column;
+  }
+  header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 22px; border-bottom: 1px solid var(--line);
+  }
+  header h1 { font-size: 16px; margin: 0; font-weight: 600; letter-spacing: .3px; }
+  header .badge {
+    font-size: 12px; color: var(--dim); border: 1px solid var(--line);
+    border-radius: 999px; padding: 2px 10px;
+  }
+  main { flex: 1; display: grid; grid-template-columns: 380px 1fr; min-height: 0; }
+  .left { border-right: 1px solid var(--line); padding: 18px; overflow: auto; }
+  .right { display: flex; flex-direction: column; min-height: 0; }
+  label { display: block; font-size: 12px; color: var(--dim); margin: 14px 0 6px; }
+  input, textarea {
+    width: 100%; background: #0b0f14; color: var(--text);
+    border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px;
+    font: 13px var(--mono); outline: none;
+  }
+  textarea { resize: vertical; min-height: 74px; }
+  input:focus, textarea:focus { border-color: var(--accent); }
+  button {
+    width: 100%; margin-top: 18px; padding: 11px; border: 0; border-radius: 8px;
+    background: var(--accent); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  button:disabled { background: #2b3444; color: var(--dim); cursor: default; }
+  button.ghost {
+    background: transparent; border: 1px solid var(--line); color: var(--dim);
+    margin-top: 8px; font-weight: 400;
+  }
+  .presets { display: flex; gap: 6px; margin-top: 8px; }
+  .presets .preset {
+    width: auto; margin: 0; padding: 6px 10px; font-size: 12px; font-weight: 400;
+    background: #1b2331; border: 1px solid var(--line); color: var(--text); border-radius: 6px;
+  }
+  .presets .preset:hover { border-color: var(--accent); }
+  .hint { font-size: 12px; color: var(--dim); margin-top: 10px; line-height: 1.7; }
+  .timeline { flex: 1; overflow: auto; padding: 18px 22px; }
+  .ev { display: flex; gap: 10px; padding: 6px 0; align-items: flex-start; }
+  .ev .tick {
+    width: 8px; height: 8px; border-radius: 50%; margin-top: 8px; flex: 0 0 8px;
+    background: var(--line);
+  }
+  .ev .body { flex: 1; min-width: 0; }
+  .ev .head { font-family: var(--mono); font-size: 13px; }
+  .ev .sub {
+    font-family: var(--mono); font-size: 12px; color: var(--dim);
+    white-space: pre-wrap; word-break: break-word; margin-top: 2px;
+    max-height: 160px; overflow: hidden;
+  }
+  .ev.action .tick { background: var(--accent); }
+  .ev.tool .tick { background: #6e7681; }
+  .ev.eval .tick { background: var(--ok); }
+  .ev.reflect .tick { background: var(--warn); }
+  .ev.reflect .head { color: var(--warn); }
+  .ev.reflect .sub { color: #c9b483; }
+  .ev.dim { opacity: .45; }
+  .ev.dim .tick { background: #30363d; }
+  .score {
+    display: inline-block; font-family: var(--mono); font-weight: 700;
+    padding: 1px 8px; border-radius: 6px; background: #12261a; color: var(--ok);
+  }
+  .empty { color: var(--dim); text-align: center; margin-top: 60px; font-size: 13px; }
+  footer {
+    border-top: 1px solid var(--line); padding: 10px 22px;
+    font-family: var(--mono); font-size: 12px; color: var(--dim);
+    white-space: pre-wrap; max-height: 132px; overflow: auto;
+  }
+  footer.ok { color: var(--ok); }
+  footer.bad { color: var(--bad); }
+  .row { display: flex; gap: 10px; }
+  .history { display: flex; flex-direction: column; gap: 4px; max-height: 168px; overflow: auto; }
+  .hist {
+    width: 100%; margin: 0; padding: 6px 8px; text-align: left;
+    background: #131922; border: 1px solid var(--line); border-radius: 6px;
+    color: var(--dim); font: 12px var(--mono); cursor: pointer;
+  }
+  .hist:hover { border-color: var(--accent); color: var(--text); }
+  .qa {
+    font-size: 12px; line-height: 1.6; border-left: 2px solid var(--line);
+    padding: 4px 8px; margin-top: 6px; white-space: pre-wrap; color: var(--text);
+  }
+  .qa.ok { border-color: var(--ok); }
+  .qa.bad { border-color: var(--bad); }
+  #ask_log { max-height: 220px; overflow: auto; margin-top: 6px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>autoflux</h1>
+  <span class="badge" id="badge">空闲</span>
+  <span class="badge">agent 自己决定每一步</span>
+</header>
+
+<main>
+  <div class="left">
+    <label>目标（一句话，给 agent 看）</label>
+    <textarea id="goal" placeholder="例：在工作区里新建 hello.txt，内容只有一行 hello"></textarea>
+
+    <div class="presets">
+      <button class="preset" data-goal="在工作区里新建一个 hello.txt，内容只有一行 hello" data-check="findstr /X /C:hello hello.txt">建个文件</button>
+      <button class="preset" data-goal="把这个目录里的代码改到 python -m unittest 全绿" data-check="">修测试</button>
+      <button class="preset" data-goal="读一遍这个目录里的代码，写一份 README.md，说明每个模块干什么" data-check="if exist README.md (exit 0) else (exit 1)">写说明</button>
+    </div>
+
+    <label>起始目录（留空 = 自动开一个空目录）</label>
+    <input id="project" placeholder="留空也行；或填 D:\work\myproject" />
+
+    <label>判定命令（退出码 0 算过；留空 = 自动用 unittest）</label>
+    <input id="check" placeholder="留空也行；或填 python -m pytest -q" />
+
+    <label>API Key（只存在内存里，不落盘）</label>
+    <input id="key" type="password" placeholder="留空则读环境变量 AUTOFLUX_API_KEY" />
+
+    <div class="row">
+      <div style="flex:1">
+        <label>最多步数</label>
+        <input id="steps" type="number" value="40" />
+      </div>
+      <div style="flex:1">
+        <label>最多尝试</label>
+        <input id="attempts" type="number" value="5" />
+      </div>
+    </div>
+
+    <button id="start">开始跑</button>
+    <button id="stop" class="ghost" disabled>停止</button>
+
+    <div class="hint">
+      它不会按剧本走：每一步调哪个工具、要不要反思、什么时候提交，
+      都由模型当场决定。<br />
+      分数只来自上面的判定命令，它自己改不了。
+    </div>
+
+    <label>历史（重启之后还在，点一条回看当时的轨迹）</label>
+    <div class="history" id="history"></div>
+
+    <label>问数据（就业工资表；答案里的每个数字都会核对）</label>
+    <textarea id="ask_q" placeholder="例：哪个行业工资最高？和最低差几倍？"></textarea>
+    <button id="ask_btn" class="ghost">问一版（可以连续追问）</button>
+    <button id="ask_reset" class="ghost">重新开始对话</button>
+    <div id="ask_log" class="hint"></div>
+  </div>
+
+  <div class="right">
+    <div class="timeline" id="timeline">
+      <div class="empty" id="empty">还没有开始。填好左边，点「开始跑」。</div>
+    </div>
+    <footer id="summary"></footer>
+  </div>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let current = null, next = 0, timer = null;
+
+function setBadge(text, cls) {
+  const b = $("badge");
+  b.textContent = text;
+  b.style.color = cls === "ok" ? "var(--ok)" : cls === "bad" ? "var(--bad)" : "var(--dim)";
+}
+
+function add(ev) {
+  const el = document.createElement("div");
+  el.className = "ev " + ev.kind;
+  const head = document.createElement("div");
+  head.className = "head";
+  const sub = document.createElement("div");
+  sub.className = "sub";
+  const tick = document.createElement("div");
+  tick.className = "tick";
+
+  if (ev.kind === "action") {
+    head.textContent = `第 ${ev.step} 步 · ${ev.action}`;
+  } else if (ev.kind === "tool") {
+    head.textContent = `工具返回 · ${ev.name}`;
+    sub.textContent = ev.result || "";
+  } else if (ev.kind === "eval") {
+    head.innerHTML = `评测 · 第 ${ev.attempt} 次 · <span class="score">${ev.passed}/${ev.total} · ${Math.round(ev.ratio * 100)}%</span>`;
+  } else if (ev.kind === "reflect") {
+    head.textContent = ev.stored ? "反思 · 已存进技能库" : "反思 · 与已有规则重复";
+    sub.textContent = ev.text || "";
+    if (ev.diagnosis) {
+      const d = document.createElement("div");
+      d.className = "sub";
+      d.textContent = "诊断：" + ev.diagnosis.slice(0, 600);
+      sub.appendChild(d);
+    }
+  } else if (ev.kind === "plan") {
+    head.textContent = "计划 · 它给自己定的子目标";
+    const list = document.createElement("div");
+    list.className = "sub";
+    (ev.steps || []).forEach((s) => {
+      const line = document.createElement("div");
+      line.textContent = (s.done ? "[x] " : "[ ] ") + s.text;
+      list.appendChild(line);
+    });
+    sub.appendChild(list);
+    el.classList.add("dim");
+  } else if (ev.kind === "reflect_skipped") {
+    head.textContent = "反思 · 跳过（还没有评测信号）";
+    el.classList.add("dim");
+  } else if (ev.kind === "end") {
+    head.textContent = "结束 · " + ev.status;
+  } else {
+    head.textContent = ev.kind;
+    sub.textContent = JSON.stringify(ev).slice(0, 400);
+  }
+
+  el.appendChild(tick);
+  const body = document.createElement("div");
+  body.className = "body";
+  body.appendChild(head);
+  if (sub.textContent) body.appendChild(sub);
+  el.appendChild(body);
+  $("timeline").appendChild(el);
+  $("timeline").scrollTop = $("timeline").scrollHeight;
+}
+
+async function poll() {
+  if (!current) return;
+  try {
+    const r = await fetch(`/api/runs/${current}?after=${next}`);
+    if (!r.ok) return;
+    const data = await r.json();
+    data.events.forEach(add);
+    next = data.next;
+    if (data.status !== "running") {
+      clearInterval(timer); timer = null;
+      setBadge(data.status === "done" ? "完成" : data.status, data.status === "done" ? "ok" : "bad");
+      $("start").disabled = false;
+      $("stop").disabled = true;
+      const f = $("summary");
+      f.textContent = data.summary || data.error || "";
+      f.className = data.status === "done" ? "ok" : "bad";
+      loadHistory();
+    }
+  } catch (e) { /* 后端还在起，下一轮再试 */ }
+}
+
+async function loadHistory() {
+  try {
+    const r = await fetch("/api/runs");
+    if (!r.ok) return;
+    const data = await r.json();
+    const box = $("history");
+    box.innerHTML = "";
+    if (!data.runs.length) {
+      const d = document.createElement("div");
+      d.className = "hint";
+      d.textContent = "还没有记录";
+      box.appendChild(d);
+      return;
+    }
+    data.runs.forEach((run) => {
+      const item = document.createElement("button");
+      item.className = "hist";
+      const mark = run.status === "done" ? "✓" : run.status === "running" ? "…" : "×";
+      item.textContent = `${mark} ${(run.goal || "（无目标）").slice(0, 26)}`;
+      item.title = `${run.id}\n${run.goal || ""}`;
+      item.onclick = () => showRun(run.id);
+      box.appendChild(item);
+    });
+  } catch (e) { /* 后端没起就跳过 */ }
+}
+
+async function showRun(runId) {
+  if (timer) { clearInterval(timer); timer = null; }
+  current = runId;
+  try {
+    const r = await fetch(`/api/runs/${runId}?after=0`);
+    if (!r.ok) return;
+    const data = await r.json();
+    $("timeline").innerHTML = "";
+    data.events.forEach(add);
+    next = data.next;
+    const f = $("summary");
+    f.textContent = data.summary || data.error || `历史记录 ${runId}`;
+    f.className = data.status === "done" ? "ok" : "";
+    $("stop").disabled = data.status !== "running";
+    $("start").disabled = false;
+    if (data.status === "running") {
+      setBadge("还在跑", "");
+      timer = setInterval(poll, 700);
+    } else {
+      setBadge(data.status === "done" ? "历史 · 完成" : "历史 · 已结束", data.status === "done" ? "ok" : "");
+    }
+  } catch (e) { /* 忽略：列表里的记录可能已经被清掉 */ }
+}
+
+$("start").onclick = async () => {
+  const body = {
+    goal: $("goal").value.trim(),
+    project: $("project").value.trim(),
+    check: $("check").value.trim(),
+    api_key: $("key").value,
+    max_steps: parseInt($("steps").value) || 40,
+    max_attempts: parseInt($("attempts").value) || 5,
+  };
+  if (!body.goal) {
+    alert("至少写一句目标");
+    return;
+  }
+  $("timeline").innerHTML = "";
+  $("summary").textContent = "";
+  $("start").disabled = true;
+  setBadge("跑起来了", "");
+  const r = await fetch("/api/runs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({ detail: r.statusText }));
+    alert("启动失败：" + (err.detail || r.statusText));
+    $("start").disabled = false;
+    setBadge("空闲", "");
+    return;
+  }
+  const data = await r.json();
+  current = data.id; next = 0;
+  $("stop").disabled = false;
+  timer = setInterval(poll, 700);
+  poll();
+};
+
+$("stop").onclick = async () => {
+  if (!current) return;
+  await fetch(`/api/runs/${current}/stop`, { method: "POST" });
+  setBadge("正在停止…", "");
+};
+
+document.querySelectorAll(".preset").forEach((btn) => {
+  btn.onclick = () => {
+    $("goal").value = btn.dataset.goal || "";
+    $("project").value = "";
+    $("check").value = btn.dataset.check || "";
+  };
+});
+
+let askHistory = [];
+
+async function askOnce() {
+  const q = $("ask_q").value.trim();
+  if (!q) return;
+  $("ask_btn").disabled = true;
+  try {
+    const r = await fetch("/api/ask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question: q, history: askHistory, api_key: $("key").value }),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      alert("问答失败：" + (data.detail || r.statusText));
+      return;
+    }
+    askHistory = data.history || [];
+    const block = document.createElement("div");
+    block.className = "qa " + (data.verified ? "ok" : "bad");
+    const check = data.verified
+      ? "数字核对：通过"
+      : "数字核对：未通过 — " + (data.problems || []).join("；");
+    block.textContent = `问：${q}\n答：${data.answer}\n${check}`;
+    $("ask_log").appendChild(block);
+    $("ask_log").scrollTop = $("ask_log").scrollHeight;
+    $("ask_q").value = "";
+  } catch (e) {
+    alert("问答失败：" + e);
+  } finally {
+    $("ask_btn").disabled = false;
+  }
+}
+
+$("ask_btn").onclick = askOnce;
+$("ask_reset").onclick = () => {
+  askHistory = [];
+  $("ask_log").innerHTML = "";
+};
+
+loadHistory();
+</script>
+</body>
+</html>

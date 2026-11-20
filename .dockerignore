@@ -1,0 +1,23 @@
+# 构建上下文里只留「运行镜像需要的东西」。
+# .venv / runs / .autoflux 动辄几百 MB，不进上下文也就不会进镜像层。
+.git
+.github
+.venv
+.tmp
+runs
+.autoflux
+bench
+tests
+docs
+__pycache__
+*.py[cod]
+*.egg-info
+build
+dist
+.env
+.env.example
+.idea
+.vscode
+.pytest_cache
+.ruff_cache
+.mypy_cache
