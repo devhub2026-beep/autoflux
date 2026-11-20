@@ -325,6 +325,10 @@ python -m unittest discover -s tests -t .
 最后那条是补出来的：曾经 goal 模式下模型跑去修 `stats.py`，因为提示词里从头到尾
 没有出现目标，只有一段示例。现在有断言盯着——任务的原文必须在提示词里。
 
+行覆盖 **90%**（`python -m coverage run --source=src/autoflux -m unittest discover -s tests -t .`）：
+`cli.py` 85%、`bench.py` 87%、`web/app.py` 84%、`graph.py` 93%。没覆盖的主要是
+交互式 `--chat` 的终端分支、`serve` 的进程生命周期、以及几个只在真网络下才走到的重试分支。
+
 `tests/test_llm_flow.py` 用假传输层把真 `LLMAgent` 的整条路径离线跑通，毫秒级不花钱。
 
 ---
@@ -377,6 +381,8 @@ txtlib        3/3       8.0      97.5         0
 - **不是多 agent**。一个模型、一个环，没有分工。
 - **不是长期自主**。一次 run 最多几十步，停下就结束了；没有「后台一直跑」的守护进程。
 - **记忆只有 Skillbook**。上下文不做长期压缩，跑长了靠预算裁剪。
+- `ask` 默认读仓库里的 `examples/employment/data/wages_2025.csv`；`pip install` 到别处拿不到这个示例，
+  得用 `--data` 指路径。
 - 一个进程同时跑多个 run 没做隔离，只用线程 + 内存字典（历史会从 `runs/` 读回来，但并发写共享 sqlite 没加锁）。
 - 判定命令是你给的，写错了它就会「正确地完成一个错的目标」。
 - 每步 5–7 秒（一次模型调用），没有缓存也没有并行。
