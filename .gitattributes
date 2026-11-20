@@ -1,0 +1,10 @@
+# 仓库统一 LF：CI 跑 Linux+Docker，混着 CRLF 容易出怪问题
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.sqlite binary
+*.db binary
