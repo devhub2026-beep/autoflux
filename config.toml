@@ -1,6 +1,5 @@
 [run]
 task = "bugfix"
-seed = 0
 max_steps = 40
 max_attempts = 5
 max_seconds = 1800

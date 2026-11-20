@@ -14,6 +14,8 @@
   补 `.dockerignore`；镜像带上 `config.toml`（否则容器里跑的是代码默认配置）。
 - 测试 131 → 147：CLI 的 run/resume/tasks/skills、跑批的 CLI/JSON/崩溃行、Web 历史、
   问答多轮与 `/api/ask` 的 history。
+- 去死代码：`config.toml` 里的 `seed` 从来没被读过（远端模型本来也没法靠它复现），
+  `Dataset.find` 也没人调，一并删掉。
 
 ## 0.5.0 — 2026-11-20
 

@@ -30,7 +30,6 @@ class LLMSettings:
 @dataclass(frozen=True)
 class Settings:
     task: str = "bugfix"
-    seed: int = 0
     store: str = ".autoflux/state.db"
     limits: Limits = Limits()
     llm: LLMSettings = LLMSettings()
@@ -73,7 +72,6 @@ def load(path: Path | None) -> Settings:
     return replace(
         base,
         task=str(run.get("task", base.task)),
-        seed=int(run.get("seed", base.seed)),
         store=str(store.get("path", base.store)),
         limits=_limits(run),
         llm=_llm(raw.get("llm", {})),

@@ -77,15 +77,6 @@ class Dataset:
     def gap_ratio(self) -> float:
         return self.top.wage / self.low.wage
 
-    def find(self, name: str) -> Row | None:
-        for row in self.rows:
-            if row.name == name:
-                return row
-        for row in self.rows:
-            if name and name in row.name:
-                return row
-        return None
-
     # ---- 给模型看的上下文 ---------------------------------------------
     def context(self) -> str:
         lines = [
