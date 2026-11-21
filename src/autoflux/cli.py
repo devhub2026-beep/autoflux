@@ -275,6 +275,10 @@ def _cmd_skills(store: str) -> int:
             return 0
         for ident, text, uses, wins in rows:
             print(f"[{ident}] 用{uses} 赢{wins}  {text}")
+        print(
+            f"\n共 {len(rows)} 条。超过 200 条、或反复用过却一次没赢且一个月没动静的，"
+            "下一次反思时会被自动淘汰。"
+        )
     return 0
 
 

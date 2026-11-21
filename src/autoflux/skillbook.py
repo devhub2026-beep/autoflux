@@ -98,6 +98,40 @@ class Skillbook:
         ).fetchall()
         return [r[0] for r in rows]
 
+    # -- 清理 ---------------------------------------------------------
+    def prune(
+        self,
+        max_rows: int = 200,
+        futile_uses: int = 3,
+        stale_days: int = 30,
+    ) -> int:
+        """把库压回可控规模，返回删掉的条数。
+
+        这个库只进不出的话，跑几百轮以后每轮都要把这些废话塞进提示词，
+        越反思越笨。两条规矩：
+
+        1. 反复用过、一次都没赢、而且已经 `stale_days` 天没动静的，是「试了也不管用」
+           的策略，删；
+        2. 总数超过 `max_rows` 时，按「赢过 > 用过 > 新」留前 `max_rows` 条，其余删。
+
+        从没被用过的新规则不按第 1 条删——它还没轮到上场。
+        """
+        cutoff = time.time() - stale_days * 86400
+        cur = self._con.execute(
+            "DELETE FROM strategies WHERE wins = 0 AND uses >= ? AND created_at < ?",
+            (futile_uses, cutoff),
+        )
+        removed = max(cur.rowcount, 0)
+        cur = self._con.execute(
+            "DELETE FROM strategies WHERE id NOT IN ("
+            "SELECT id FROM strategies "
+            "ORDER BY wins DESC, uses DESC, created_at DESC, id DESC LIMIT ?)",
+            (max_rows,),
+        )
+        removed += max(cur.rowcount, 0)
+        self._con.commit()
+        return removed
+
     def count(self) -> int:
         return int(self._con.execute("SELECT COUNT(*) FROM strategies").fetchone()[0])
 

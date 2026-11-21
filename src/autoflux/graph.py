@@ -233,15 +233,19 @@ class GraphEngine:
             diagnosis=diagnosis,
         )
         added = self.skillbook.add(text)
+        pruned = self.skillbook.prune()
         history.append(
             f"[反思] {text}" + ("" if added else "（与已有规则重复，未入库）")
         )
+        if pruned:
+            history.append(f"[清理] 淘汰了 {pruned} 条从不奏效 / 超出上限的旧规则")
         if diagnosis:
             history.append(f"[诊断] {diagnosis[:600]}")
         self.tracer.emit(
             "reflect",
             text=text,
             stored=added is not None,
+            pruned=pruned,
             diagnosis=diagnosis[:2000],
         )
         return {

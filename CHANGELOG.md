@@ -32,7 +32,13 @@
   `PYTHONIOENCODING=cp1252` 下跑判分，必须照样通过）。
 - CI 加 `docker` job：`docker build` → 容器里跑 `autoflux --help` / `autoflux tasks` /
   打印版本 → 起 `serve` 打 `/api/health` 与 `/api/runs`。Dockerfile 从「静态改过」变成
-  「每次 push 都被真建一遍」。
+  「每次 push 都被真建一遍」（第 4 次 Actions 里 docker job 34 秒通过，日志里能看到
+  `{"ok":true,"runs":0}`）。
+- **策略库开始淘汰**：`Skillbook.prune()` 每次反思后跑一遍，删掉「用过 3 次以上、
+  一次没赢、且 30 天没动静」的规则，并把总量压到 200 条以内（按赢过 > 用过 > 新排序）。
+  之前它只增不减，跑几百轮以后提示词里全是废话。测试 149 → 152。
+- CI 的 `actions/checkout` 4→5、`actions/setup-python` 5→6，消掉 Node 20 弃用警告；
+  README 的覆盖率数字按实测对齐（90% → 91%，cli 86% / bench 88%）。
 
 ## 0.5.0 — 2026-11-20
 
