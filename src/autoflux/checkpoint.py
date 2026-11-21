@@ -7,7 +7,6 @@ checkpoint 写进一个 sqlite 文件，下次用同一个 thread_id 打开就�
 """
 from __future__ import annotations
 
-import sqlite3
 import threading
 from collections.abc import Iterator, Sequence
 from pathlib import Path
@@ -21,6 +20,8 @@ from langgraph.checkpoint.base import (
     CheckpointMetadata,
     CheckpointTuple,
 )
+
+from .sqlite3_util import connect, write_with_retry
 
 # class 里有个 list 方法，类作用域内 `list[...]` 会被当成方法名，所以挪到模块级
 Writes = list[tuple[str, str, Any]]
@@ -53,11 +54,12 @@ class SqliteSaver(BaseCheckpointSaver):
     def __init__(self, path: str | Path = ":memory:") -> None:
         super().__init__()
         self.path = str(path)
-        if self.path != ":memory:":
-            Path(self.path).parent.mkdir(parents=True, exist_ok=True)
-        self._conn = sqlite3.connect(self.path, check_same_thread=False)
+        self._conn = connect(self.path, check_same_thread=False)
         # LangGraph 会在工作线程里调 put / put_writes，同一个连接必须串行化
         self._lock = threading.RLock()
+        write_with_retry(self._init_schema)
+
+    def _init_schema(self) -> None:
         self._conn.executescript(_SCHEMA)
         self._conn.commit()
 
@@ -74,19 +76,22 @@ class SqliteSaver(BaseCheckpointSaver):
         ctype, cblob = self.serde.dumps_typed(checkpoint)
         mtype, mblob = self.serde.dumps_typed(dict(metadata or {}))
         with self._lock:
-            self._conn.execute(
-                "INSERT OR REPLACE INTO checkpoints"
-                " (thread_id, checkpoint_id, parent_id, checkpoint, metadata)"
-                " VALUES (?, ?, ?, ?, ?)",
-                (
-                    thread_id,
-                    checkpoint["id"],
-                    parent_id,
-                    _pack(ctype, cblob),
-                    _pack(mtype, mblob),
-                ),
-            )
-            self._conn.commit()
+            def go() -> None:
+                self._conn.execute(
+                    "INSERT OR REPLACE INTO checkpoints"
+                    " (thread_id, checkpoint_id, parent_id, checkpoint, metadata)"
+                    " VALUES (?, ?, ?, ?, ?)",
+                    (
+                        thread_id,
+                        checkpoint["id"],
+                        parent_id,
+                        _pack(ctype, cblob),
+                        _pack(mtype, mblob),
+                    ),
+                )
+                self._conn.commit()
+
+            write_with_retry(go)
         # LangGraph 1.x 要求 put 把「带新 checkpoint_id 的 config」还回去
         return {
             "configurable": {
@@ -111,13 +116,16 @@ class SqliteSaver(BaseCheckpointSaver):
                 (thread_id, checkpoint_id, task_id, idx, channel, _pack(vtype, vblob))
             )
         with self._lock:
-            self._conn.executemany(
-                "INSERT OR REPLACE INTO writes"
-                " (thread_id, checkpoint_id, task_id, idx, channel, value)"
-                " VALUES (?, ?, ?, ?, ?, ?)",
-                rows,
-            )
-            self._conn.commit()
+            def go() -> None:
+                self._conn.executemany(
+                    "INSERT OR REPLACE INTO writes"
+                    " (thread_id, checkpoint_id, task_id, idx, channel, value)"
+                    " VALUES (?, ?, ?, ?, ?, ?)",
+                    rows,
+                )
+                self._conn.commit()
+
+            write_with_retry(go)
 
     # -- 读 -----------------------------------------------------------
     def get_tuple(self, config: RunnableConfig) -> CheckpointTuple | None:
@@ -177,9 +185,13 @@ class SqliteSaver(BaseCheckpointSaver):
                 yield got
 
     def delete_thread(self, thread_id: str) -> None:
-        self._conn.execute("DELETE FROM checkpoints WHERE thread_id = ?", (thread_id,))
-        self._conn.execute("DELETE FROM writes WHERE thread_id = ?", (thread_id,))
-        self._conn.commit()
+        def go() -> None:
+            self._conn.execute("DELETE FROM checkpoints WHERE thread_id = ?", (thread_id,))
+            self._conn.execute("DELETE FROM writes WHERE thread_id = ?", (thread_id,))
+            self._conn.commit()
+
+        with self._lock:
+            write_with_retry(go)
 
     # -- 内部 ---------------------------------------------------------
     def _writes(self, thread_id: str, checkpoint_id: str) -> Writes:

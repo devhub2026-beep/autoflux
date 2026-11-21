@@ -10,6 +10,8 @@ import sqlite3
 import time
 from pathlib import Path
 
+from .sqlite3_util import connect, write_with_retry
+
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS strategies (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -29,12 +31,18 @@ def normalize(text: str) -> str:
 
 
 class Skillbook:
-    """sqlite 支撑的持久策略库。"""
+    """sqlite 支撑的持久策略库。
 
-    def __init__(self, path: str | Path) -> None:
+    多个 run 会同时写它（每次反思都写），所以开库走 `connect()`：
+    WAL + 30 秒 busy_timeout + 对 locked 的退避重试。
+    """
+
+    def __init__(self, path: str | Path, timeout: float = 30.0) -> None:
         self.path = Path(path)
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self._con = sqlite3.connect(self.path)
+        self._con = connect(self.path, timeout=timeout)
+        write_with_retry(self._init_schema)
+
+    def _init_schema(self) -> None:
         self._con.execute(_SCHEMA)
         self._con.commit()
 
@@ -48,34 +56,45 @@ class Skillbook:
         if not key:
             return None
         try:
-            cur = self._con.execute(
-                "INSERT INTO strategies (text, normalized, source, created_at) "
-                "VALUES (?, ?, ?, ?)",
-                (body, key, source, time.time()),
-            )
-            self._con.commit()
-            rowid = cur.lastrowid
-            return int(rowid) if rowid is not None else None
+            def go() -> sqlite3.Cursor:
+                cur = self._con.execute(
+                    "INSERT INTO strategies (text, normalized, source, created_at) "
+                    "VALUES (?, ?, ?, ?)",
+                    (body, key, source, time.time()),
+                )
+                self._con.commit()
+                return cur
+
+            cur = write_with_retry(go)
         except sqlite3.IntegrityError:
+            self._con.rollback()
             return None
+        rowid = cur.lastrowid
+        return int(rowid) if rowid is not None else None
 
     def bump_use(self, ids: list[int]) -> None:
         if not ids:
             return
-        self._con.executemany(
-            "UPDATE strategies SET uses = uses + 1 WHERE id = ?",
-            [(i,) for i in ids],
-        )
-        self._con.commit()
+        self._bump("uses", ids)
 
     def bump_win(self, ids: list[int]) -> None:
         if not ids:
             return
-        self._con.executemany(
-            "UPDATE strategies SET wins = wins + 1 WHERE id = ?",
-            [(i,) for i in ids],
+        self._bump("wins", ids)
+
+    def _bump(self, column: str, ids: list[int]) -> None:
+        # 两个列名写死在这里，不拼字符串——拼出来的 SQL 让别人看着不放心
+        sql = (
+            "UPDATE strategies SET uses = uses + 1 WHERE id = ?"
+            if column == "uses"
+            else "UPDATE strategies SET wins = wins + 1 WHERE id = ?"
         )
-        self._con.commit()
+
+        def go() -> None:
+            self._con.executemany(sql, [(i,) for i in ids])
+            self._con.commit()
+
+        write_with_retry(go)
 
     # -- 读取 ---------------------------------------------------------
     def skills(self, limit: int = 12) -> list[str]:
@@ -117,20 +136,24 @@ class Skillbook:
         从没被用过的新规则不按第 1 条删——它还没轮到上场。
         """
         cutoff = time.time() - stale_days * 86400
-        cur = self._con.execute(
-            "DELETE FROM strategies WHERE wins = 0 AND uses >= ? AND created_at < ?",
-            (futile_uses, cutoff),
-        )
-        removed = max(cur.rowcount, 0)
-        cur = self._con.execute(
-            "DELETE FROM strategies WHERE id NOT IN ("
-            "SELECT id FROM strategies "
-            "ORDER BY wins DESC, uses DESC, created_at DESC, id DESC LIMIT ?)",
-            (max_rows,),
-        )
-        removed += max(cur.rowcount, 0)
-        self._con.commit()
-        return removed
+
+        def go() -> int:
+            cur = self._con.execute(
+                "DELETE FROM strategies WHERE wins = 0 AND uses >= ? AND created_at < ?",
+                (futile_uses, cutoff),
+            )
+            removed = max(cur.rowcount, 0)
+            cur = self._con.execute(
+                "DELETE FROM strategies WHERE id NOT IN ("
+                "SELECT id FROM strategies "
+                "ORDER BY wins DESC, uses DESC, created_at DESC, id DESC LIMIT ?)",
+                (max_rows,),
+            )
+            removed += max(cur.rowcount, 0)
+            self._con.commit()
+            return removed
+
+        return write_with_retry(go)
 
     def count(self) -> int:
         return int(self._con.execute("SELECT COUNT(*) FROM strategies").fetchone()[0])

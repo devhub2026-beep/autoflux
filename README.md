@@ -246,6 +246,26 @@ price_out = 0.0   # 每百万 output token
 
 ---
 
+## 同时开两个 run 会怎样
+
+会打架的地方只有一处：**所有 run 共用一个 skillbook**（`[store] path`），
+两边同时反思就同时写同一个 sqlite。默认行为是直接抛 `database is locked`。
+
+约定写在 `sqlite3_util.py`，两个库都走它：
+
+- `journal_mode = WAL`：一边写、一边读，不互相卡死；
+- `busy_timeout = 30 秒`：sqlite 自己先等，不用调用方立刻重试；
+- 还锁着就退避重试（6 次，从 50ms 开始翻倍）——正常路径走不到这一步；
+- 切 WAL 本身要短暂拿排他锁，所以「开库」也套在同一套重试里。
+
+checkpoint 不用共享：每个 run 有自己的 `runs/<id>/checkpoints.sqlite`，
+但同一份文件被两个 saver 打开（比如手动续跑时）也按同一套规矩走。
+
+测试里是用线程压出来的：6 个连接同时写 150 条、外部连接把库锁住 0.5 秒、
+两个 saver 同时写同一份 checkpoint —— 都不许抛锁。
+
+---
+
 ## 目标模式是怎么判分的
 
 `GoalTask` 只做三件事：
@@ -312,6 +332,7 @@ src/autoflux/
 ├── skillbook.py    sqlite 策略库（反思入库 + 定期淘汰）
 ├── usage.py        token / 花费记账（Meter 给 agent 和 reflector 共用）
 ├── runlog.py       run.json 读写：开跑写身份，跑完补 usage 与汇总
+├── sqlite3_util.py sqlite 并发约定：WAL + busy_timeout + locked 重试
 ├── protocols.py    Tool / Agent / Task / Reflector 四个契约
 ├── trace.py        JSONL 事件追踪
 ├── tools/fs.py     工作区工具，路径逃逸会被拒
@@ -347,7 +368,7 @@ src/autoflux/
 python -m unittest discover -s tests -t .
 ```
 
-**161 个用例，全绿**，覆盖：停止条件、时间预算、策略库去重与持久化、**策略库淘汰**
+**167 个用例，全绿**，覆盖：停止条件、时间预算、策略库去重与持久化、**策略库淘汰**
 （反复用过却一次没赢的老规则会删、赢过的留着、总量封顶 200 条）、反思必须带信号、
 诊断能穿透盲评测、评测器不打脏工作区、隐藏用例不泄漏、重复输出折叠、
 上下文按预算裁剪、LangGraph 图只有一个环、网页接口的 400/404、
@@ -365,6 +386,8 @@ python -m unittest discover -s tests -t .
 **就业示例的判分脚本自检**（标准答案报告能过、两个负增长行业按原表序）、
 **token 记账**（端点回了 usage 就按 usage 记、没回就单独记一笔「没报账」、
 断点续跑把上一段的账接上）、
+**并发写 sqlite**（6 个连接同时写不抛锁、外部锁住 0.5 秒靠重试撑过去、
+两个 saver 同时写同一份 checkpoint）、
 以及**提示词契约**——「这一轮交给模型的文字里，是否真的有这次的目标」。
 
 最后那条是补出来的：曾经 goal 模式下模型跑去修 `stats.py`，因为提示词里从头到尾
@@ -372,7 +395,7 @@ python -m unittest discover -s tests -t .
 
 行覆盖 **91%**（`python -m coverage run --source=src/autoflux -m unittest discover -s tests -t .`）：
 `cli.py` 86%、`bench.py` 86%、`web/app.py` 83%、`graph.py` 93%、`skillbook.py` 94%、
-`usage.py` 98%、`runlog.py` 92%。没覆盖的主要是
+`usage.py` 98%、`runlog.py` 92%、`sqlite3_util.py` 95%。没覆盖的主要是
 交互式 `--chat` 的终端分支、`serve` 的进程生命周期、以及几个只在真网络下才走到的重试分支。
 
 提交前的三条门槛（CI 里也是这三条，外加覆盖率 85% 的底线）：

@@ -42,6 +42,10 @@
   CLI 打印调用次数与 token；`run.json` 留下 `usage` + `finished_at`，`--resume` 先读回来
   再接着记；bench 汇总多了「平均 token」与合计；`config.toml` 的 `[llm]` 新增 `price_in`
   / `price_out`，填了才折算花费。测试 152 → 161。
+- **同时开两个 run 不再 `database is locked`**：新增 `sqlite3_util.py`，skillbook 和
+  checkpointer 都改成 WAL + 30 秒 busy_timeout + 对 locked 的退避重试（6 次，50ms 起翻倍）；
+  切 WAL 的排他锁也套在同一套重试里。新增并发测试：6 个连接同时写 150 条、外部锁住 0.5 秒、
+  两个 saver 同时写同一份 checkpoint。测试 161 → 167。
 - CI 的 `actions/checkout` 4→5、`actions/setup-python` 5→6，消掉 Node 20 弃用警告；
   README 的覆盖率数字按实测对齐（90% → 91%，cli 86% / bench 86%）。
 
