@@ -30,6 +30,9 @@
   （ubuntu 三个都过）。给 `_check.py` / `selfcheck.py` 加了 stdout/stderr 切 UTF-8，
   `selfcheck` 转出判分输出时也按 UTF-8 解码；测试 148 → 149（新增用例在
   `PYTHONIOENCODING=cp1252` 下跑判分，必须照样通过）。
+- CI 加 `docker` job：`docker build` → 容器里跑 `autoflux --help` / `autoflux tasks` /
+  打印版本 → 起 `serve` 打 `/api/health` 与 `/api/runs`。Dockerfile 从「静态改过」变成
+  「每次 push 都被真建一遍」。
 
 ## 0.5.0 — 2026-11-20
 

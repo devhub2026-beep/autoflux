@@ -103,6 +103,10 @@ docker build -t autoflux .
 docker run -e AUTOFLUX_API_KEY=sk-... -p 8765:8765 autoflux
 ```
 
+这个镜像每次 push 都会在 CI 里**真的建一遍**：建完在容器里跑 `autoflux --help`、`autoflux tasks`，
+再起 `serve` 打 `/api/health` 和 `/api/runs`（workflow 里的 `docker` job）。
+不是「我读完 Dockerfile 觉得没问题」。
+
 模型 key 也可以放在项目根的 `.env` 里（`AUTOFLUX_API_KEY=sk-...`），启动时自动读；
 `.env` 已在 `.gitignore` 里，照 `.env.example` 抄一行就行。
 
