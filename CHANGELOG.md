@@ -51,6 +51,10 @@
   `default_data_path()` 包内优先、仓库内兜底；CLI 与 `/api/ask` 的默认值都换成它。
   新增 5 个用例（含「把 cwd 挪开仍能找到」「不给 `--data` 也能跑」）；
   CI 的 wheel 校验清单也加了这个 csv。测试 167 → 172。
+- **首份真实跑批结果**：deepseek-v4-pro、6 个任务各 1 次、`--max-steps 20`，
+  6/6 成功、平均 7.8 步 / 53.2 秒、合计 99359 token、反思 0 次
+  （任务对 V4 偏简单，读断言就能定位，反思没被选中）。原始 JSON 存
+  `bench/results/20261121-141904.json`，README 顶部有表并写明「1 次重复、任务偏易」。
 - CI 的 `actions/checkout` 4→5、`actions/setup-python` 5→6，消掉 Node 20 弃用警告；
   README 的覆盖率数字按实测对齐（90% → 91%，cli 86% / bench 86%）。
 
