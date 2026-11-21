@@ -46,6 +46,11 @@
   checkpointer 都改成 WAL + 30 秒 busy_timeout + 对 locked 的退避重试（6 次，50ms 起翻倍）；
   切 WAL 的排他锁也套在同一套重试里。新增并发测试：6 个连接同时写 150 条、外部锁住 0.5 秒、
   两个 saver 同时写同一份 checkpoint。测试 161 → 167。
+- **`ask` 装好后不用再 `cd` 到仓库**：默认工资表随 wheel 走
+  （`autoflux/employment/data/wages_2025.csv`，`package-data` 带上），
+  `default_data_path()` 包内优先、仓库内兜底；CLI 与 `/api/ask` 的默认值都换成它。
+  新增 5 个用例（含「把 cwd 挪开仍能找到」「不给 `--data` 也能跑」）；
+  CI 的 wheel 校验清单也加了这个 csv。测试 167 → 172。
 - CI 的 `actions/checkout` 4→5、`actions/setup-python` 5→6，消掉 Node 20 弃用警告；
   README 的覆盖率数字按实测对齐（90% → 91%，cli 86% / bench 86%）。
 

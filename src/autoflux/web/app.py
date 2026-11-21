@@ -26,7 +26,7 @@ from pydantic import BaseModel, Field
 from .. import config as config_mod
 from ..agents.llm import LLMAgent, complete_fn
 from ..checkpoint import SqliteSaver
-from ..employment import Dataset, qa
+from ..employment import Dataset, default_data_path, qa
 from ..graph import GraphEngine
 from ..reflector import LLMReflector
 from ..runlog import read_meta, stamp_run, usage_from_meta, write_meta
@@ -394,8 +394,8 @@ def create_app(
 
         和 /api/runs 不是一回事——这条路径不跑动作循环，只跑「写 → 核 → 重写」。
         """
-        data = Path(req.data.strip()) if req.data.strip() else Path(
-            "examples/employment/data/wages_2025.csv"
+        data = (
+            Path(req.data.strip()) if req.data.strip() else default_data_path()
         )
         if not data.is_file():
             raise HTTPException(status_code=400, detail=f"找不到数据表：{data}")

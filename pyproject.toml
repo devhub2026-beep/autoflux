@@ -26,6 +26,8 @@ where = ["src"]
 "autoflux" = ["py.typed"]
 "autoflux.tasks.bugfix" = ["workspace/**/*", "hidden/**/*"]
 "autoflux.web" = ["index.html"]
+# 默认数据表必须随包走：pip 装到别人机器上，examples/ 根本不存在
+"autoflux.employment" = ["data/*.csv"]
 
 [tool.ruff]
 line-length = 100

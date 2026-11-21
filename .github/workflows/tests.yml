@@ -50,7 +50,8 @@ jobs:
           import glob, zipfile
           names = zipfile.ZipFile(glob.glob("dist/*.whl")[0]).namelist()
           need = ["autoflux/py.typed", "autoflux/web/index.html",
-                  "autoflux/tasks/bugfix/hidden/hidden_cases.py"]
+                  "autoflux/tasks/bugfix/hidden/hidden_cases.py",
+                  "autoflux/employment/data/wages_2025.csv"]
           missing = [n for n in need if n not in names]
           assert not missing, missing
           print("wheel 内容 OK：", len(names), "个文件")

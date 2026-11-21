@@ -19,7 +19,7 @@ from pathlib import Path
 from . import config, tasks
 from .agents.llm import LLMAgent, complete_fn
 from .checkpoint import SqliteSaver
-from .employment import Dataset, qa
+from .employment import Dataset, default_data_path, qa
 from .graph import GraphEngine
 from .protocols import Task
 from .reflector import LLMReflector
@@ -78,8 +78,8 @@ def _build_parser() -> argparse.ArgumentParser:
     ask.add_argument("--chat", action="store_true", help="多轮问答：一行一问，空行结束")
     ask.add_argument(
         "--data",
-        default="examples/employment/data/wages_2025.csv",
-        help="统计表 CSV（默认用仓库里的就业示例数据）",
+        default=None,
+        help="统计表 CSV（默认用包内自带的就业数据，不传也行）",
     )
     ask.add_argument("--attempts", type=int, default=3, help="每问最多让模型重写几次")
     ask.add_argument("--config", default="config.toml", help="配置文件路径")
@@ -345,7 +345,7 @@ def _cmd_ask(args: argparse.Namespace) -> int:
         print("[错误] 要么给 --question，要么用 --chat 进多轮问答", file=sys.stderr)
         return 2
 
-    path = Path(args.data)
+    path = Path(args.data) if args.data else default_data_path()
     if not path.is_file():
         print(f"[错误] 找不到数据表：{path}", file=sys.stderr)
         return 2
