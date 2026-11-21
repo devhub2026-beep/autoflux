@@ -55,6 +55,13 @@
   6/6 成功、平均 7.8 步 / 53.2 秒、合计 99359 token、反思 0 次
   （任务对 V4 偏简单，读断言就能定位，反思没被选中）。原始 JSON 存
   `bench/results/20261121-141904.json`，README 顶部有表并写明「1 次重复、任务偏易」。
+- **跑批补上方差**：同一批 6 个任务各跑 3 次，18/18 成功、平均 8.4 步 / 65.9 秒、
+  合计 329067 token、反思仍 0 次。两个方差方向相反：步数几乎不变（`csvkit` 三次都是 9 步），
+  耗时抖 2–3 倍（`csvkit` 51.0→132.5 秒，`txtlib` 76.9→165.4 秒），差的部分在模型与网络侧。
+  原始 JSON 存 `bench/results/20261121-162218.json`，README 的跑批表与检查清单按它更新。
+- **发行**：打 `v0.6.0` 注释 tag 并发布 Release（release notes 直接写已知限制）。
+- 顺手核了一遍历史：`.env` 从未进过 git（历史里只有 `.env.example` 与 `tests/test_env_file.py`），
+  源码里也没有硬编码的 `sk-` 密钥，所以「转 public」这件事只剩用户拍板。
 - CI 的 `actions/checkout` 4→5、`actions/setup-python` 5→6，消掉 Node 20 弃用警告；
   README 的覆盖率数字按实测对齐（90% → 91%，cli 86% / bench 86%）。
 
