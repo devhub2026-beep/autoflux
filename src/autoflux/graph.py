@@ -33,6 +33,7 @@ from .skillbook import Skillbook
 from .stop import StopPolicy
 from .trace import Tracer
 from .types import Action, AttemptRecord, Observation, RunResult, Score
+from .usage import Meter, Usage
 
 MAX_TOOL_OUTPUT = 4000
 MAX_HISTORY_ENTRY = 2000
@@ -88,6 +89,7 @@ class GraphEngine:
         thread_id: str = "main",
         checkpointer: Any | None = None,
         snapshot_path: Path | None = None,
+        meter: Meter | None = None,
     ) -> None:
         self.task = task
         self.agent = agent
@@ -100,6 +102,8 @@ class GraphEngine:
         self.thread_id = thread_id
         self.checkpointer = checkpointer or MemorySaver()
         self.snapshot_path = snapshot_path
+        # agent 和 reflector 用同一个 meter 记账；引擎只负责把账摆到结果里
+        self.meter = meter
         self._seen: dict[str, tuple[int, str]] = {}
         self._should_stop: Callable[[], bool] | None = None
 
@@ -434,6 +438,7 @@ class GraphEngine:
             reflections=int(state.get("reflections") or 0),
             best=best.score if best else None,
             plan=self._plan_view(state),
+            usage=self.meter.snapshot() if self.meter else Usage(),
         )
 
     def _snapshot(self, state: FluxState) -> None:

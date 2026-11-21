@@ -29,11 +29,13 @@ from ..checkpoint import SqliteSaver
 from ..employment import Dataset, qa
 from ..graph import GraphEngine
 from ..reflector import LLMReflector
+from ..runlog import read_meta, stamp_run, usage_from_meta, write_meta
 from ..skillbook import Skillbook
 from ..stop import StopPolicy
 from ..tasks.goal import GoalTask
 from ..tools.fs import default_tools
 from ..trace import Tracer
+from ..usage import Meter
 
 _INDEX = Path(__file__).with_name("index.html")
 
@@ -66,6 +68,7 @@ class RunState:
     events: list[dict[str, Any]] = field(default_factory=list)
     cancel: threading.Event = field(default_factory=threading.Event)
     result: str = ""
+    usage: dict[str, int] = field(default_factory=dict)
 
 
 class RunRequest(BaseModel):
@@ -161,9 +164,8 @@ class RunManager:
             meta_path = run_dir / "run.json"
             if not meta_path.is_file():
                 continue
-            try:
-                meta = json.loads(meta_path.read_text(encoding="utf-8"))
-            except (OSError, ValueError):
+            meta = read_meta(meta_path)
+            if not meta:
                 continue
             run_id = str(meta.get("run_id") or run_dir.name)
             if run_id in self.runs:
@@ -182,6 +184,7 @@ class RunManager:
                 summary=summary,
                 created=created,
                 events=_read_events(run_dir / "trace.jsonl"),
+                usage=usage_from_meta(meta).as_dict(),
             )
 
     # -- 对外 ---------------------------------------------------------
@@ -216,20 +219,16 @@ class RunManager:
         try:
             run_dir.mkdir(parents=True, exist_ok=True)
             # 先把元信息落盘：进程中途死掉，重启后这条 run 还能从列表里点开
-            (run_dir / "run.json").write_text(
-                json.dumps(
-                    {
-                        "run_id": state.id,
-                        "task": "goal",
-                        "goal": req.goal,
-                        "check": req.check,
-                        "project": req.project,
-                        "workdir": str(workdir),
-                    },
-                    ensure_ascii=False,
-                    indent=2,
-                ),
-                encoding="utf-8",
+            write_meta(
+                run_dir / "run.json",
+                {
+                    "run_id": state.id,
+                    "task": "goal",
+                    "goal": req.goal,
+                    "check": req.check,
+                    "project": req.project,
+                    "workdir": str(workdir),
+                },
             )
             if req.api_key:
                 os.environ[self.settings.llm.api_key_env] = req.api_key
@@ -238,10 +237,11 @@ class RunManager:
                 goal=req.goal, check=req.check, source=Path(req.project)
             )
             tools = default_tools(workdir)
+            meter = Meter()
             agent = LLMAgent(
-                self.settings.llm, mission=getattr(task, "brief", lambda: "")()
+                self.settings.llm, mission=getattr(task, "brief", lambda: "")(), meter=meter
             )
-            reflector = LLMReflector(complete_fn(self.settings.llm))
+            reflector = LLMReflector(complete_fn(self.settings.llm, meter=meter))
             tracer = WebTracer(run_dir / "trace.jsonl", state.events)
 
             limits = replace(
@@ -264,14 +264,24 @@ class RunManager:
                     thread_id=state.id,
                     checkpointer=saver,
                     snapshot_path=run_dir / "state.json",
+                    meter=meter,
                 )
                 try:
                     result = engine.run(should_stop=state.cancel.is_set)
                 finally:
                     saver.close()
 
-            state.summary = result.summary()
+            summary = result.summary()
+            llm = self.settings.llm
+            if result.usage.calls and (llm.price_in or llm.price_out):
+                summary += (
+                    f"\n花费        {result.usage.cost(llm.price_in, llm.price_out):.4f}"
+                    "（按配置单价估算）"
+                )
+            state.summary = summary
             state.result = result.curve()
+            state.usage = result.usage.as_dict()
+            stamp_run(run_dir / "run.json", result.usage, summary)
             state.status = "done"
         except Exception as exc:
             state.error = f"{type(exc).__name__}: {exc}"
@@ -336,6 +346,7 @@ def create_app(
                     "status": s.status,
                     "created": s.created,
                     "summary": s.summary,
+                    "usage": s.usage,
                 }
                 for s in sorted(manager.runs.values(), key=lambda s: s.created, reverse=True)
             ]
@@ -353,6 +364,7 @@ def create_app(
             "goal": state.goal,
             "project": state.project,
             "check": state.check,
+            "usage": state.usage,
             "next": after + len(events),
             "events": events,
         }

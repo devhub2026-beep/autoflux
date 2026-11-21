@@ -25,6 +25,9 @@ class LLMSettings:
     api_key_env: str = "AUTOFLUX_API_KEY"
     temperature: float = 0.2
     timeout: float = 120.0
+    # 每百万 token 的单价，只用于把 usage 折算成花费；不填就只统计 token，不猜钱
+    price_in: float = 0.0
+    price_out: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -56,6 +59,8 @@ def _llm(d: dict[str, Any]) -> LLMSettings:
         api_key_env=str(d.get("api_key_env", base.api_key_env)),
         temperature=float(d.get("temperature", base.temperature)),
         timeout=float(d.get("timeout", base.timeout)),
+        price_in=float(d.get("price_in", base.price_in)),
+        price_out=float(d.get("price_out", base.price_out)),
     )
 
 

@@ -7,6 +7,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
+from .usage import Usage
+
 ActionKind = Literal["tool", "plan", "reflect", "submit", "stop"]
 
 
@@ -104,6 +106,7 @@ class RunResult:
     reflections: int
     best: Score | None = None
     plan: tuple[tuple[str, bool], ...] = ()
+    usage: Usage = field(default_factory=Usage)
 
     def curve(self) -> str:
         if not self.attempts:
@@ -127,6 +130,7 @@ class RunResult:
         ]
         if self.best is not None:
             lines.append(f"最好成绩    {self.best.passed}/{self.best.total}")
+        lines.extend(self.usage.lines())
         if self.plan:
             lines.append("计划")
             lines.extend(self.plan_lines())

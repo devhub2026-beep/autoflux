@@ -12,6 +12,10 @@ model = "deepseek-v4-pro"
 api_key_env = "AUTOFLUX_API_KEY"
 temperature = 0.2
 timeout = 120.0
+# 每百万 token 的单价，用来把 token 折算成花费。填 0 就只统计 token，不猜钱。
+# 查一下你用的模型现在的价格再填，别拿旧价当现价。
+price_in = 0.0
+price_out = 0.0
 
 [store]
 path = ".autoflux/state.db"

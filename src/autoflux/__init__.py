@@ -8,6 +8,7 @@ from .config import Limits, LLMSettings, Settings, load
 from .graph import GraphEngine
 from .skillbook import Skillbook
 from .types import Action, AttemptRecord, Observation, RunResult, Score
+from .usage import Meter, Usage
 
 __version__ = "0.6.0"
 
@@ -17,11 +18,13 @@ __all__ = [
     "GraphEngine",
     "LLMSettings",
     "Limits",
+    "Meter",
     "Observation",
     "RunResult",
     "Score",
     "Settings",
     "Skillbook",
+    "Usage",
     "__version__",
     "load",
 ]

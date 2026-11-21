@@ -23,12 +23,14 @@ from .employment import Dataset, qa
 from .graph import GraphEngine
 from .protocols import Task
 from .reflector import LLMReflector
+from .runlog import stamp_run, usage_from_meta
 from .skillbook import Skillbook
 from .stop import StopPolicy
 from .tasks.goal import GoalTask
 from .tools.fs import default_tools
 from .trace import Tracer
 from .types import RunResult
+from .usage import Meter
 
 RESUME_KEYS = (
     "history",
@@ -138,8 +140,9 @@ def _cmd_run(args: argparse.Namespace) -> int:
     workdir = Path(args.workdir).resolve()
     tools = default_tools(workdir)
 
-    agent = LLMAgent(cfg.llm, mission=getattr(task, "brief", lambda: "")())
-    reflector = LLMReflector(complete_fn(cfg.llm))
+    meter = Meter()
+    agent = LLMAgent(cfg.llm, mission=getattr(task, "brief", lambda: "")(), meter=meter)
+    reflector = LLMReflector(complete_fn(cfg.llm, meter=meter))
 
     stamp = time.strftime("%Y%m%d-%H%M%S")
     run_dir = Path("runs") / stamp
@@ -176,13 +179,15 @@ def _cmd_run(args: argparse.Namespace) -> int:
             thread_id=stamp,
             checkpointer=saver,
             snapshot_path=run_dir / "state.json",
+            meter=meter,
         )
         try:
             result = engine.run()
         finally:
             saver.close()
 
-    _print_result(result, tracer.path, workdir)
+    stamp_run(run_dir / "run.json", result.usage, result.summary())
+    _print_result(result, tracer.path, workdir, cfg.llm)
     return 0
 
 
@@ -211,8 +216,11 @@ def _cmd_resume(args: argparse.Namespace, cfg: config.Settings) -> int:
         return 2
 
     tools = default_tools(workdir)
-    agent = LLMAgent(cfg.llm, mission=task.brief())
-    reflector = LLMReflector(complete_fn(cfg.llm))
+    meter = Meter()
+    # 上一段跑掉的钱要接上：不然续跑的花费从 0 开始算，等于自欺欺人
+    meter.replace_with(usage_from_meta(meta))
+    agent = LLMAgent(cfg.llm, mission=task.brief(), meter=meter)
+    reflector = LLMReflector(complete_fn(cfg.llm, meter=meter))
 
     stamp = meta.get("run_id") or time.strftime("%Y%m%d-%H%M%S")
     tracer = Tracer(run_dir / "trace.jsonl")
@@ -234,6 +242,7 @@ def _cmd_resume(args: argparse.Namespace, cfg: config.Settings) -> int:
             thread_id=stamp,
             checkpointer=saver,
             snapshot_path=run_dir / "state.json",
+            meter=meter,
         )
         try:
             result = engine.run(resume_state=resume_state)
@@ -241,13 +250,24 @@ def _cmd_resume(args: argparse.Namespace, cfg: config.Settings) -> int:
             if saver:
                 saver.close()
 
-    _print_result(result, tracer.path, workdir)
+    stamp_run(run_dir / "run.json", result.usage, result.summary())
+    _print_result(result, tracer.path, workdir, cfg.llm)
     return 0
 
 
-def _print_result(result: RunResult, trace_path: Path | None, workdir: Path) -> None:
+def _print_result(
+    result: RunResult,
+    trace_path: Path | None,
+    workdir: Path,
+    llm: config.LLMSettings | None = None,
+) -> None:
     print(f"\n=== {result.task} ===")
     print(result.summary())
+    if llm is not None and result.usage.calls and (llm.price_in or llm.price_out):
+        print(
+            f"花费        {result.usage.cost(llm.price_in, llm.price_out):.4f}"
+            f"（单价 入 {llm.price_in}/百万 · 出 {llm.price_out}/百万）"
+        )
     if result.attempts:
         print("\n--- 每次尝试 ---")
         for a in result.attempts:

@@ -32,6 +32,7 @@ from .stop import StopPolicy
 from .tasks.goal import GoalTask
 from .tools.fs import default_tools
 from .trace import Tracer
+from .usage import Meter
 
 
 def load_task_specs(bench_dir: Path, names: list[str] | None) -> list[dict[str, Any]]:
@@ -79,8 +80,9 @@ def run_once(
 
     task = GoalTask(goal=spec["goal"], check=spec["check"], source=Path(spec["source"]))
     tools = default_tools(workdir)
-    agent = LLMAgent(cfg.llm, mission=task.brief())
-    reflector = LLMReflector(complete_fn(cfg.llm))
+    meter = Meter()
+    agent = LLMAgent(cfg.llm, mission=task.brief(), meter=meter)
+    reflector = LLMReflector(complete_fn(cfg.llm, meter=meter))
     tracer = Tracer(trace_path)
 
     started = time.time()
@@ -96,6 +98,7 @@ def run_once(
                 tracer=tracer,
                 workdir=workdir,
                 thread_id=f"{spec['name']}-{int(started)}",
+                meter=meter,
             )
             result = engine.run()
         seconds = time.time() - started
@@ -112,6 +115,8 @@ def run_once(
             "curve": [],
             "plan_done": 0,
             "plan_total": 0,
+            "tokens": 0,
+            "cost": 0.0,
         }
 
     best = result.best.ratio if result.best else 0.0
@@ -127,6 +132,8 @@ def run_once(
         "curve": [round(a.score.ratio, 3) for a in result.attempts],
         "plan_done": sum(1 for _, done in result.plan if done),
         "plan_total": len(result.plan),
+        "tokens": result.usage.total_tokens,
+        "cost": round(result.usage.cost(cfg.llm.price_in, cfg.llm.price_out), 4),
     }
 
 
@@ -145,6 +152,9 @@ def summarize(rows: list[dict[str, Any]]) -> dict[str, Any]:
             "steps_max": max(r["steps"] for r in items),
             "seconds_mean": round(statistics.mean(r["seconds"] for r in items), 1),
             "reflections_mean": round(statistics.mean(r["reflections"] for r in items), 2),
+            "tokens_mean": round(statistics.mean(r.get("tokens", 0) for r in items), 0),
+            "tokens_total": sum(r.get("tokens", 0) for r in items),
+            "cost_total": round(sum(r.get("cost", 0.0) for r in items), 4),
         }
 
     by_task: dict[str, Any] = {}
@@ -164,12 +174,19 @@ def _print_table(summary: dict[str, Any]) -> None:
     overall = summary["overall"]
     print(f"\n=== 汇总：{overall.get('success', 0)}/{overall.get('n', 0)} 成功"
           f"（{overall.get('success_rate', 0):.0%}）===")
-    print(f"{'任务':<14}{'成功':>8}{'平均步数':>10}{'平均秒数':>10}{'平均反思':>10}")
+    print(f"{'任务':<14}{'成功':>8}{'平均步数':>10}{'平均秒数':>10}{'平均反思':>10}{'平均token':>11}")
     for name, row in summary["by_task"].items():
         print(
             f"{name:<14}{row['success']}/{row['n']:>6}"
             f"{row['steps_mean']:>10}{row['seconds_mean']:>10}{row['reflections_mean']:>10}"
+            f"{int(row.get('tokens_mean', 0)):>11}"
         )
+    tokens = overall.get("tokens_total", 0)
+    if tokens:
+        line = f"\n合计 token {tokens}"
+        if overall.get("cost_total"):
+            line += f"，花费 {overall['cost_total']:.4f}（按配置单价估算）"
+        print(line)
     if summary["failure_reasons"]:
         print("\n失败原因：")
         for reason, count in sorted(

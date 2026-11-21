@@ -217,6 +217,35 @@ checkpointer 接口）。所以进程中途死掉，`--resume runs/<id>` 是真�
 
 ---
 
+## 这一轮花了多少
+
+每次 `run` / `serve` 的模型调用都会记账：`usage.py` 里的 `Meter` 被 agent 和 reflector
+共用一本，端点回 `usage` 就记 `prompt_tokens` / `completion_tokens`，**不回也记一笔
+「没报账的调用」**——这样「token 很少」永远有解释，不是静默按 0 算。
+
+跑完 CLI 打印：
+
+```
+模型调用    14 次
+token       31820 入 / 5960 出（共 37780）
+```
+
+`run.json` 里同时留下 `usage` 与 `finished_at`；`run --resume` 会先把它读回来再接着记，
+不会把上一段的花费抹成 0。网页的 `/api/runs`、`/api/runs/{id}` 也带 `usage` 字段。
+
+要折算成钱，就在 `config.toml` 的 `[llm]` 里填每百万 token 的单价：
+
+```toml
+price_in = 0.0    # 每百万 input token
+price_out = 0.0   # 每百万 output token
+```
+
+填了才会打「花费」，没填只报 token——**单价不瞎猜**，汇率和降价都别让我替你想。
+`bench` 的汇总表多了「平均 token」一列，并在末尾给出合计 token / 合计花费，
+这样「哪套任务最烧钱」有数字可比。
+
+---
+
 ## 目标模式是怎么判分的
 
 `GoalTask` 只做三件事：
@@ -280,7 +309,9 @@ src/autoflux/
 ├── stop.py         停止条件（达标 / 次数 / 无提升 / 步数 / 时间 / 外部停止）
 ├── evaluator.py    评测闸门：沙箱 + 隐藏测试 + 分数解析
 ├── reflector.py    反思（模板版 / 模型版），强制要求信号
-├── skillbook.py    sqlite 策略库
+├── skillbook.py    sqlite 策略库（反思入库 + 定期淘汰）
+├── usage.py        token / 花费记账（Meter 给 agent 和 reflector 共用）
+├── runlog.py       run.json 读写：开跑写身份，跑完补 usage 与汇总
 ├── protocols.py    Tool / Agent / Task / Reflector 四个契约
 ├── trace.py        JSONL 事件追踪
 ├── tools/fs.py     工作区工具，路径逃逸会被拒
@@ -316,7 +347,7 @@ src/autoflux/
 python -m unittest discover -s tests -t .
 ```
 
-**152 个用例，全绿**，覆盖：停止条件、时间预算、策略库去重与持久化、**策略库淘汰**
+**161 个用例，全绿**，覆盖：停止条件、时间预算、策略库去重与持久化、**策略库淘汰**
 （反复用过却一次没赢的老规则会删、赢过的留着、总量封顶 200 条）、反思必须带信号、
 诊断能穿透盲评测、评测器不打脏工作区、隐藏用例不泄漏、重复输出折叠、
 上下文按预算裁剪、LangGraph 图只有一个环、网页接口的 400/404、
@@ -332,13 +363,16 @@ python -m unittest discover -s tests -t .
 **问答层的编数打回**（大数不再被相对容差放过、重写时必须拿到具体问题、三轮不过就报问题）、
 **多轮问答**（第二问的提示词里带着第一问和它的答案）、
 **就业示例的判分脚本自检**（标准答案报告能过、两个负增长行业按原表序）、
+**token 记账**（端点回了 usage 就按 usage 记、没回就单独记一笔「没报账」、
+断点续跑把上一段的账接上）、
 以及**提示词契约**——「这一轮交给模型的文字里，是否真的有这次的目标」。
 
 最后那条是补出来的：曾经 goal 模式下模型跑去修 `stats.py`，因为提示词里从头到尾
 没有出现目标，只有一段示例。现在有断言盯着——任务的原文必须在提示词里。
 
 行覆盖 **91%**（`python -m coverage run --source=src/autoflux -m unittest discover -s tests -t .`）：
-`cli.py` 86%、`bench.py` 88%、`web/app.py` 84%、`graph.py` 93%、`skillbook.py` 94%。没覆盖的主要是
+`cli.py` 86%、`bench.py` 86%、`web/app.py` 83%、`graph.py` 93%、`skillbook.py` 94%、
+`usage.py` 98%、`runlog.py` 92%。没覆盖的主要是
 交互式 `--chat` 的终端分支、`serve` 的进程生命周期、以及几个只在真网络下才走到的重试分支。
 
 提交前的三条门槛（CI 里也是这三条，外加覆盖率 85% 的底线）：

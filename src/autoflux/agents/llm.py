@@ -22,6 +22,7 @@ from typing import Any
 from ..config import LLMSettings
 from ..protocols import Tool
 from ..types import Action, Observation
+from ..usage import Meter
 
 # 传输层签名：给一个 Request 和超时，返回一个可 with、可 read 的对象。
 # 默认是 urllib；测试时换成假实现，整条 LLM 路径就能离线跑。
@@ -105,9 +106,12 @@ class LLMAgent:
         settings: LLMSettings,
         transport: Transport | None = None,
         mission: str = "",
+        meter: Meter | None = None,
     ) -> None:
         self.settings = settings
         self._transport: Transport = transport or _urllib_transport
+        # 记账不是必须的：单独用 agent 时不传 meter，就不会统计 token
+        self.meter = meter
         # 任务由外部给：模型决定「怎么做」，不决定「要什么」
         self.mission = mission.strip()
         _load_env_file()
@@ -212,11 +216,22 @@ class LLMAgent:
             # IncompleteRead / 断包 / 非 UTF-8，都是网络层的问题，重试有意义
             raise _Retryable(f"连不上模型端点：{exc}") from exc
 
+        self._record_usage(body)
         try:
             return body["choices"][0]["message"]["content"] or ""
         except (KeyError, IndexError, TypeError) as exc:
             raise RuntimeError(f"模型返回格式异常：{str(body)[:300]}") from exc
 
+    def _record_usage(self, body: Any) -> None:
+        """端点回了 usage 就记账；没回也要记一笔「这次没报账」。"""
+        if self.meter is None:
+            return
+        usage = body.get("usage") if isinstance(body, dict) else None
+        if not isinstance(usage, dict):
+            self.meter.add_unreported()
+            return
+        self.meter.add(_token_count(usage.get("prompt_tokens")),
+                       _token_count(usage.get("completion_tokens")))
     def _parse(self, text: str, tool_names: set[str] | None = None) -> Action:
         """解析模型输出。
 
@@ -267,6 +282,13 @@ class LLMAgent:
         return Action("stop", text=f"未知动作 {kind!r}")
 
 
+def _token_count(value: Any) -> int:
+    """usage 里的数字偶尔是字符串或者干脆没有；拿不准就当 0，别炸整次调用。"""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return 0
+    return max(int(value), 0)
+
+
 def _pick_args(data: dict[str, Any]) -> dict[str, Any]:
     """参数可能藏在 args / parameters / arguments / kwargs 里。"""
     for key in ("args", "parameters", "arguments", "kwargs", "params"):
@@ -278,9 +300,10 @@ def _pick_args(data: dict[str, Any]) -> dict[str, Any]:
     return {k: v for k, v in data.items() if k not in reserved and not isinstance(v, (dict, list))}
 
 
-def complete_fn(settings: LLMSettings, transport: Transport | None = None):
-    """给 LLMReflector 用的单次补全函数。"""
-    agent = LLMAgent(settings, transport=transport)
+def complete_fn(settings: LLMSettings, transport: Transport | None = None,
+                meter: Meter | None = None):
+    """给 LLMReflector 用的单次补全函数。和主 agent 共用一本账。"""
+    agent = LLMAgent(settings, transport=transport, meter=meter)
 
     def _complete(prompt: str) -> str:
         return agent._chat([{"role": "user", "content": prompt}])

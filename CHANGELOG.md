@@ -37,8 +37,13 @@
 - **策略库开始淘汰**：`Skillbook.prune()` 每次反思后跑一遍，删掉「用过 3 次以上、
   一次没赢、且 30 天没动静」的规则，并把总量压到 200 条以内（按赢过 > 用过 > 新排序）。
   之前它只增不减，跑几百轮以后提示词里全是废话。测试 149 → 152。
+- **token / 花费记账**：`usage.py` 的 `Meter` 由 agent 和 reflector 共用，端点回了 `usage`
+  就按它记 prompt / completion token，没回也单独记「没报账的调用」，不静默按 0 算。
+  CLI 打印调用次数与 token；`run.json` 留下 `usage` + `finished_at`，`--resume` 先读回来
+  再接着记；bench 汇总多了「平均 token」与合计；`config.toml` 的 `[llm]` 新增 `price_in`
+  / `price_out`，填了才折算花费。测试 152 → 161。
 - CI 的 `actions/checkout` 4→5、`actions/setup-python` 5→6，消掉 Node 20 弃用警告；
-  README 的覆盖率数字按实测对齐（90% → 91%，cli 86% / bench 88%）。
+  README 的覆盖率数字按实测对齐（90% → 91%，cli 86% / bench 86%）。
 
 ## 0.5.0 — 2026-11-20
 
