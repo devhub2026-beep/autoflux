@@ -1,0 +1,85 @@
+{
+  "stamp": "20261126-220526",
+  "rows": [
+    {
+      "task": "yearday",
+      "success": true,
+      "best": 1.0,
+      "steps": 8,
+      "seconds": 135.9,
+      "reflections": 0,
+      "attempts": 1,
+      "stop_reason": "达标（1.00 >= 1.00）",
+      "curve": [
+        1.0
+      ],
+      "plan_done": 3,
+      "plan_total": 3,
+      "tokens": 20707,
+      "cost": 0.0
+    },
+    {
+      "task": "yearday",
+      "success": true,
+      "best": 1.0,
+      "steps": 9,
+      "seconds": 196.5,
+      "reflections": 0,
+      "attempts": 1,
+      "stop_reason": "达标（1.00 >= 1.00）",
+      "curve": [
+        1.0
+      ],
+      "plan_done": 1,
+      "plan_total": 3,
+      "tokens": 23093,
+      "cost": 0.0
+    },
+    {
+      "task": "yearday",
+      "success": true,
+      "best": 1.0,
+      "steps": 9,
+      "seconds": 128.0,
+      "reflections": 0,
+      "attempts": 1,
+      "stop_reason": "达标（1.00 >= 1.00）",
+      "curve": [
+        1.0
+      ],
+      "plan_done": 3,
+      "plan_total": 3,
+      "tokens": 21501,
+      "cost": 0.0
+    }
+  ],
+  "summary": {
+    "overall": {
+      "n": 3,
+      "success": 3,
+      "success_rate": 1.0,
+      "steps_mean": 8.7,
+      "steps_max": 9,
+      "seconds_mean": 153.5,
+      "reflections_mean": 0,
+      "tokens_mean": 21767,
+      "tokens_total": 65301,
+      "cost_total": 0.0
+    },
+    "by_task": {
+      "yearday": {
+        "n": 3,
+        "success": 3,
+        "success_rate": 1.0,
+        "steps_mean": 8.7,
+        "steps_max": 9,
+        "seconds_mean": 153.5,
+        "reflections_mean": 0,
+        "tokens_mean": 21767,
+        "tokens_total": 65301,
+        "cost_total": 0.0
+      }
+    },
+    "failure_reasons": {}
+  }
+}
