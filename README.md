@@ -461,7 +461,7 @@ python -m unittest discover -s tests -t .
 
 ## 实测（deepseek-v4-pro，2026-11-14）
 
-### 跑批：6 个任务 × 3 次 = 18 次
+### 跑批：6 个任务 × 3 次 = 18 次（2026-11-21）
 
 ```
 === 汇总：18/18 成功（100%）===
@@ -475,7 +475,7 @@ txtlib        3/3       8.0      97.5         0
 ```
 
 复现：`python run.py bench --tasks all --repeats 3 --max-steps 30`
-（明细在 `bench/results/baseline2.json`。）
+（明细在 `bench/results/20261121-162218.json`。）
 
 这 6 个任务都是我造的小库（几十行 + 会失败的测试），**100% 说明它还够不着「难」，
 不说明它强**。反思次数全是 0 也是同一个原因：判定命令直接给出失败用例名，
